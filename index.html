@@ -1,0 +1,3466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MES Pro — 제조실행 생산관리 시스템</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg-p: #ffffff; --bg-s: #f8f9fa; --bg-t: #f1f3f5;
+  --bg-i: #e6f1fb; --bg-ok: #eaf3de; --bg-w: #faeeda; --bg-d: #fcebeb;
+  --tx: #212529; --tx-s: #495057; --tx-t: #868e96;
+  --tx-i: #185FA5; --tx-ok: #3B6D11; --tx-w: #854F0B; --tx-d: #791F1F;
+  --br: rgba(0, 0, 0, 0.08); --br-s: rgba(0, 0, 0, 0.15);
+  --br-i: rgba(24, 95, 165, 0.25); --br-ok: rgba(59, 109, 17, 0.25);
+  --br-w: rgba(133, 79, 11, 0.25); --br-d: rgba(121, 31, 31, 0.25);
+  --rm: 8px; --rl: 12px;
+  --f: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', '맑은 고딕', sans-serif;
+  --shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+:root.dark {
+  --bg-p: #1a1a1e; --bg-s: #242428; --bg-t: #121214;
+  --bg-i: #062b4e; --bg-ok: #153205; --bg-w: #3d2304; --bg-d: #491212;
+  --tx: #f1f3f5; --tx-s: #ced4da; --tx-t: #868e96;
+  --tx-i: #85B7EB; --tx-ok: #97C459; --tx-w: #EF9F27; --tx-d: #F09595;
+  --br: rgba(255, 255, 255, 0.08); --br-s: rgba(255, 255, 255, 0.15);
+  --br-i: rgba(133, 183, 235, 0.2); --br-ok: rgba(151, 196, 89, 0.2);
+  --br-w: rgba(239, 159, 39, 0.2); --br-d: rgba(240, 149, 149, 0.2);
+  --shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height: 100vh; overflow: hidden; display: flex; transition: background 0.2s, color 0.2s; }
+
+/* 토스트 알림 컨테이너 */
+#toast-container { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { background: var(--bg-p); border: 1px solid var(--br); color: var(--tx); font-size: 12.5px; font-weight: 600; padding: 10px 18px; border-radius: var(--rm); box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; animation: toastIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: auto; }
+.toast-info { border-left: 4px solid var(--tx-i); }
+.toast-success { border-left: 4px solid var(--tx-ok); }
+.toast-error { border-left: 4px solid var(--tx-d); background: var(--bg-d); color: var(--tx-d); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 사이드바 */
+.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+.logo { padding: 18px 20px; border-bottom: 1px solid var(--br); }
+.logo-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tx-i); }
+.logo-title i { font-size: 20px; }
+.logo-sub { font-size: 11px; color: var(--tx-t); margin-top: 3px; padding-left: 28px; font-weight: 500; }
+.nav-g { padding: 10px 0 4px; }
+.nav-lbl { font-size: 10px; color: var(--tx-t); padding: 8px 20px 4px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.ni { display: flex; align-items: center; gap: 10px; padding: 9px 20px; font-size: 13px; color: var(--tx-s); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; user-select: none; }
+.ni:hover { background: var(--bg-s); color: var(--tx); }
+.ni.active { background: var(--bg-s); color: var(--tx-i); border-left-color: var(--tx-i); font-weight: 600; }
+.ni i { font-size: 16px; flex-shrink: 0; }
+.nbadge { margin-left: auto; font-size: 10px; background: #e03131; color: #fff; border-radius: 10px; padding: 1px 6px; font-weight: 600; }
+
+/* 메인 영역 */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.topbar { background: var(--bg-p); border-bottom: 1px solid var(--br); padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
+.tb-title { font-size: 16px; font-weight: 600; }
+.tb-right { display: flex; align-items: center; gap: 12px; }
+.pill { font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 1px solid; display: inline-flex; align-items: center; gap: 5px; font-weight: 500; }
+.pill-ok { background: var(--bg-ok); color: var(--tx-ok); border-color: var(--br-ok); }
+.pill-warn { background: var(--bg-w); color: var(--tx-w); border-color: var(--br-w); }
+.dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-g { background: #40c057; }
+.dot-a { background: #f76707; }
+.theme-btn { background: none; border: none; color: var(--tx-s); cursor: pointer; font-size: 18px; display: flex; align-items: center; padding: 4px; border-radius: 4px; transition: background 0.15s; }
+.theme-btn:hover { background: var(--bg-s); }
+
+/* 컨텐츠 및 레이아웃 */
+.content { flex: 1; overflow-y: auto; padding: 20px 24px; display: none; }
+.content.active { display: block; }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 15px 18px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; }
+.mc.clickable { cursor: pointer; }
+.mc.clickable:hover { border-color: var(--tx-i); transform: translateY(-2px); }
+.mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.mc-val { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.mc-sub { font-size: 11px; color: var(--tx-t); margin-top: 4px; font-weight: 500; }
+.up { color: var(--tx-ok) !important; }
+.dn { color: var(--tx-d) !important; }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+.card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 18px 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+.card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.card-ttl { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card-ttl i { font-size: 16px; color: var(--tx-i); }
+
+/* 테이블 스타일 */
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; padding: 9px 12px; color: var(--tx-s); border-bottom: 1px solid var(--br); font-weight: 600; white-space: nowrap; background: var(--bg-s); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--br); vertical-align: middle; color: var(--tx); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg-s); }
+
+/* 뱃지 및 프로그레스 */
+.bd { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; font-weight: 600; }
+.bd-ok { background: var(--bg-ok); color: var(--tx-ok); border-color: var(--br-ok); }
+.bd-warn { background: var(--bg-w); color: var(--tx-w); border-color: var(--br-w); }
+.bd-err { background: var(--bg-d); color: var(--tx-d); border-color: var(--br-d); }
+.bd-info { background: var(--bg-i); color: var(--tx-i); border-color: var(--br-i); }
+.bd-neu { background: var(--bg-s); color: var(--tx-s); border-color: var(--br); }
+
+.pb { height: 6px; background: var(--bg-s); border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; }
+.pf { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+
+/* 폼 컨트롤 */
+input, select, textarea { font-size: 12px; padding: 6px 10px; height: 32px; font-family: var(--f); background: var(--bg-p); color: var(--tx); border: 1px solid var(--br-s); border-radius: var(--rm); outline: none; transition: border-color .15s, box-shadow .15s; }
+input:focus, select:focus, textarea:focus { border-color: var(--tx-i); box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.15); }
+input[readonly] { background: var(--bg-s); color: var(--tx-t); cursor: not-allowed; }
+textarea { height: auto; resize: vertical; }
+
+.toolbar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.btn { padding: 6px 14px; border-radius: var(--rm); font-size: 12px; cursor: pointer; border: 1px solid var(--br-s); background: var(--bg-p); color: var(--tx); height: 32px; display: inline-flex; align-items: center; gap: 6px; font-family: var(--f); font-weight: 500; transition: all .15s; white-space: nowrap; }
+.btn:hover { background: var(--bg-s); border-color: var(--tx-s); }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--tx-i); color: #fff; border-color: var(--tx-i); }
+.btn-primary:hover { background: #134e8a; border-color: #134e8a; }
+.btn-danger { background: var(--bg-d); color: var(--tx-d); border-color: var(--br-d); }
+.btn-danger:hover { background: #f03e3e; color: #fff; }
+.btn-sm { padding: 4px 10px; font-size: 11px; height: 26px; border-radius: 6px; }
+
+.del-btn, .edit-btn, .restore-btn { padding: 3px 8px; font-size: 11px; height: 24px; border-radius: 4px; cursor: pointer; background: transparent; font-family: var(--f); display: inline-flex; align-items: center; gap: 4px; transition: all .15s; border: 1px solid; }
+.del-btn { border-color: var(--br-d); color: var(--tx-d); }
+.del-btn:hover { background: var(--bg-d); }
+.edit-btn { border-color: var(--br-i); color: var(--tx-i); }
+.edit-btn:hover { background: var(--bg-i); }
+.restore-btn { border-color: var(--br-ok); color: var(--tx-ok); }
+.restore-btn:hover { background: var(--bg-ok); }
+
+/* 패널 디자인 */
+.add-panel { background: var(--bg-s); border: 1px solid var(--br-i); border-radius: var(--rl); padding: 16px 20px; margin-bottom: 16px; display: none; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02); }
+.add-panel.open { display: block; animation: slideDown 0.2s ease; }
+.add-panel.edit-mode { border-color: var(--br-w); }
+.panel-ttl { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.clr-add { color: var(--tx-i); }
+.clr-edit { color: var(--tx-w); }
+
+.fg { display: grid; gap: 12px; margin-bottom: 14px; }
+.fg2 { grid-template-columns: 1fr 1fr; }
+.fg3 { grid-template-columns: 1fr 1fr 1fr; }
+.fg4 { grid-template-columns: repeat(4, 1fr); }
+.ff label { display: block; font-size: 11px; color: var(--tx-s); margin-bottom: 4px; font-weight: 600; }
+.ff input, .ff select, .ff textarea { width: 100%; }
+.ff-note { font-size: 10px; color: var(--tx-t); margin-top: 3px; }
+.form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* 레이아웃 모달 및 오버레이 */
+.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(2px); }
+.overlay.open { display: flex; }
+.dlg { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 24px; max-width: 420px; width: 90%; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); animation: scaleUp 0.15s ease; }
+.dlg-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.dlg-msg { font-size: 12.5px; color: var(--tx-s); margin-bottom: 20px; line-height: 1.6; }
+.dlg-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* 커스텀 설정 모달 */
+.custom-modal { max-width: 500px !important; }
+
+.sum-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 12px 16px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); }
+.si { font-size: 24px; color: var(--tx-s); }
+.sn { font-size: 18px; font-weight: 700; }
+.sl { font-size: 11px; color: var(--tx-t); font-weight: 500; }
+
+/* 수주처 카드 & 드래그엔드롭 스타일 */
+.client-card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; }
+.client-card.expanded { border-color: var(--tx-i); }
+.client-card.dragging { opacity: 0.4; border: 1px dashed var(--tx-i); transform: scale(0.98); }
+.client-card.drag-over { border: 2px dashed var(--tx-i) !important; background: var(--bg-s); }
+.client-hd { padding: 14px 18px; display: flex; align-items: center; gap: 12px; cursor: move; user-select: none; }
+.client-hd:hover { background: var(--bg-s); }
+.c-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--bg-i); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--tx-i); flex-shrink: 0; }
+.client-body { display: none; border-top: 1px solid var(--br); padding: 16px 18px; background: var(--bg-s); }
+.client-body.open { display: block; }
+
+/* 칸반보드 */
+.kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; }
+.kb-col { min-width: 220px; max-width: 260px; flex: 1; flex-shrink: 0; background: var(--bg-s); border-radius: var(--rl); border: 1px solid var(--br); padding: 8px; display: flex; flex-direction: column; max-height: 480px; }
+.kb-col-hd { font-size: 12px; font-weight: 600; padding: 8px 10px; border-radius: var(--rm); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+.kb-cards-container { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.kb-card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rm); padding: 12px; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow); position: relative; }
+.kb-card:hover { border-color: var(--tx-i); transform: translateY(-2px); }
+.kb-card-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.kb-card-client { font-size: 11px; color: var(--tx-s); font-weight: 500; }
+.kb-card-due { font-size: 11px; margin-top: 6px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.kb-empty { font-size: 11px; color: var(--tx-t); text-align: center; padding: 24px 8px; border: 1px dashed var(--br); border-radius: var(--rm); background: var(--bg-p); }
+
+.stat-sel { font-size: 11px; padding: 3px 6px; height: 26px; border-radius: 4px; border: 1px solid var(--br-s); background: var(--bg-p); cursor: pointer; font-family: var(--f); font-weight: 500; }
+
+/* 액션 리스트 */
+.action-row { display: flex; flex-direction: column; gap: 8px; }
+.action-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--rm); background: var(--bg-s); border: 1px solid var(--br); }
+.action-item i { font-size: 18px; flex-shrink: 0; }
+.action-item.urgent { background: var(--bg-d); border-color: var(--br-d); color: var(--tx-d); }
+.action-item.urgent i { color: var(--tx-d); }
+.action-item.warn { background: var(--bg-w); border-color: var(--br-w); color: var(--tx-w); }
+.action-item.warn i { color: var(--tx-w); }
+.action-item.info { background: var(--bg-i); border-color: var(--br-i); color: var(--tx-i); }
+.action-item.info i { color: var(--tx-i); }
+.action-txt { font-size: 12px; font-weight: 600; }
+.action-sub { font-size: 11px; color: var(--tx-t); margin-top: 2px; }
+
+/* 품질 */
+.al { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--rl); margin-bottom: 10px; border: 1px solid; box-shadow: var(--shadow); }
+.al-err { background: var(--bg-d); border-color: var(--br-d); }
+.al-warn { background: var(--bg-w); border-color: var(--br-w); }
+.al-info { background: var(--bg-i); border-color: var(--br-i); }
+.al i { font-size: 18px; margin-top: 2px; flex-shrink: 0; }
+.al-err i { color: var(--tx-d); }.al-warn i { color: var(--tx-w); }.al-info i { color: var(--tx-i); }
+.al-t { font-size: 13px; font-weight: 600; }
+.al-s { font-size: 11px; color: var(--tx-s); margin-top: 3px; font-weight: 500; }
+
+.cw { position: relative; width: 100%; }
+.cw-180 { height: 180px; }
+.cw-220 { height: 220px; }
+.amt-blue { color: var(--tx-i); font-weight: 600; }
+.sec-lbl { font-size: 12px; font-weight: 600; color: var(--tx-s); margin: 18px 0 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--br); padding-bottom: 6px; }
+.empty { text-align: center; padding: 32px 16px; color: var(--tx-t); font-size: 12.5px; background: var(--bg-p); border-radius: var(--rl); border: 1px dashed var(--br); }
+.empty i { font-size: 32px; display: block; margin-bottom: 8px; opacity: .4; color: var(--tx-t); }
+
+.day-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 12px; font-weight: 600; text-align: center; }
+.day-urgent { background: #ffe3e3; color: #e03131; }
+.day-warn { background: #fff4e6; color: #f76707; }
+.day-ok { background: #ebfbee; color: #37b24d; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media(max-width: 1024px) {
+  .metrics, .row2, .row3, .sum-row, .fg4 { grid-template-columns: 1fr 1fr; }
+  .fg3 { grid-template-columns: 1fr 1fr; }
+}
+@media(max-width: 680px) {
+  .sidebar { display: none; }
+  .metrics, .row2, .row3, .sum-row, .fg2, .fg3, .fg4 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- 토스트 알림 영역 -->
+<div id="toast-container"></div>
+
+<!-- 공용 삭제/일반 알림 확인 모달 -->
+<div class="overlay" id="confirmDlg">
+  <div class="dlg">
+    <div class="dlg-title" id="dlgTitleContainer" style="color:var(--tx-d);"><i class="ti ti-alert-triangle"></i><span id="dlgTitle">확인</span></div>
+    <div class="dlg-msg" id="dlgMsg">안내 메시지 내용입니다.</div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeDlg()">취소</button>
+      <button class="btn btn-danger" id="dlgOkBtn"><i class="ti ti-trash"></i>실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- 품질/공정 모달 (원클릭 단계 및 메모 변경용) -->
+<div class="overlay" id="kanbanEditModal">
+  <div class="dlg custom-modal">
+    <div class="dlg-title" style="color:var(--tx-i);"><i class="ti ti-settings"></i><span>공정 상태 변경</span></div>
+    <div class="fg fg2" style="margin-top: 14px;">
+      <div class="ff" style="grid-column: 1 / -1;">
+        <label>대상 제품</label>
+        <input type="text" id="km-prod-name" readonly>
+      </div>
+      <div class="ff">
+        <label>공정 단계</label>
+        <select id="km-stage"></select>
+      </div>
+      <div class="ff">
+        <label>상태</label>
+        <select id="km-status">
+          <option>견적</option>
+          <option>설계중</option>
+          <option>자재준비</option>
+          <option>생산중</option>
+          <option>완료</option>
+          <option>지연</option>
+        </select>
+      </div>
+      <div class="ff" style="grid-column: 1 / -1;">
+        <label>공정 관리 메모</label>
+        <textarea id="km-memo" rows="3" placeholder="작업 특이사항이나 진행 상태 기록"></textarea>
+      </div>
+    </div>
+    <div class="dlg-actions" style="margin-top: 14px;">
+      <button class="btn" onclick="closeKanbanModal()">취소</button>
+      <button class="btn btn-primary" id="kmSaveBtn"><i class="ti ti-device-floppy"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 권한 인증 모달 (초기 비밀번호 문구 제거됨) -->
+<div class="overlay" id="adminAuthModal">
+  <div class="dlg" style="max-width: 360px;">
+    <div class="dlg-title" style="color:var(--tx-i);"><i class="ti ti-shield-lock"></i><span>관리자 권한 인증</span></div>
+    <div class="dlg-msg" style="margin-bottom: 12px;">데이터를 수정, 추가 또는 삭제하려면 관리자 비밀번호를 입력해주십시오.</div>
+    <div class="ff" style="margin-bottom: 16px;">
+      <label>비밀번호 입력</label>
+      <input type="password" id="adminPasswordInput" placeholder="비밀번호를 입력하세요" style="width: 100%; text-align: center; letter-spacing: 0.5em; font-size: 16px;">
+      <div id="adminAuthError" style="color: var(--tx-d); font-size: 11px; margin-top: 4px; display: none; font-weight: 600;">
+        <i class="ti ti-x"></i> 비밀번호가 일치하지 않습니다.
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeAdminAuth()">취소</button>
+      <button class="btn btn-primary" onclick="verifyAdminPassword()"><i class="ti ti-key"></i>인증하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 비밀번호 변경 모달 -->
+<div class="overlay" id="adminPasswordChangeModal">
+  <div class="dlg" style="max-width: 360px;">
+    <div class="dlg-title" style="color:var(--tx-w);"><i class="ti ti-settings-automation"></i><span>관리자 비밀번호 변경</span></div>
+    <div class="fg" style="margin-top: 14px;">
+      <div class="ff">
+        <label>현재 비밀번호 *</label>
+        <input type="password" id="currentPasswordInput" placeholder="현재 비밀번호">
+      </div>
+      <div class="ff">
+        <label>새 비밀번호 *</label>
+        <input type="password" id="newPasswordInput" placeholder="새 비밀번호">
+      </div>
+      <div class="ff">
+        <label>새 비밀번호 확인 *</label>
+        <input type="password" id="newPasswordConfirmInput" placeholder="새 비밀번호 확인">
+      </div>
+    </div>
+    <div class="dlg-actions" style="margin-top: 16px;">
+      <button class="btn" onclick="closeAdminPasswordChange()">취소</button>
+      <button class="btn btn-primary" onclick="submitAdminPasswordChange()"><i class="ti ti-device-floppy"></i>변경하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 왼쪽 사이드바 네비게이션 -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-title"><i class="ti ti-building-factory-2"></i>MES Pro</div>
+    <div class="logo-sub">제조실행 시스템 v3.8</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">메인 대시보드</div>
+    <div class="ni active" onclick="go('dashboard',this)"><i class="ti ti-layout-dashboard"></i>종합 대시보드</div>
+    <div class="ni" onclick="go('clients',this)"><i class="ti ti-building-community"></i>수주 정보 관리</div>
+    <div class="ni" onclick="go('materials',this)"><i class="ti ti-truck-loading"></i>자재 수급/발주</div>
+    <div class="ni" onclick="go('inventory',this)"><i class="ti ti-packages"></i>실시간 재고 관리</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">생산 실행 및 흐름</div>
+    <div class="ni" onclick="go('orders',this)"><i class="ti ti-clipboard-list"></i>생산 지시 등록</div>
+    <div class="ni" onclick="go('process',this)"><i class="ti ti-layout-kanban"></i>실시간 공정 관리</div>
+    <div class="ni" onclick="go('quality',this)"><i class="ti ti-shield-check"></i>품질 및 검사</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">시스템 관리</div>
+    <div class="ni" onclick="go('workers',this)"><i class="ti ti-users"></i>현장 작업원 관리</div>
+    <div class="ni" onclick="go('alerts',this)"><i class="ti ti-bell"></i>시스템 알림 로그<span class="nbadge" id="alertBadge">0</span></div>
+    <div class="ni" onclick="go('trash',this)"><i class="ti ti-trash"></i>휴지통<span class="nbadge" id="trashBadge" style="background:#868e96;">0</span></div>
+  </div>
+</div>
+
+<!-- 우측 메인 컨텐츠 영역 -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-title" id="ptitle">종합 대시보드</div>
+    <div class="tb-right">
+      <!-- 관리자 모드 활성화 상태 전용 영역 -->
+      <div id="topbar-admin-area" style="display: inline-flex; align-items: center; gap: 8px;"></div>
+      
+      <span class="pill pill-ok"><span class="dot dot-g"></span>A 라인 가동중</span>
+      <span class="pill pill-warn"><span class="dot dot-a"></span>B 라인 정밀 정비</span>
+      <button class="theme-btn" onclick="toggleTheme()" title="화면 테마 전환"><i class="ti ti-sun-moon" id="themeIcon"></i></button>
+      <span style="font-size:12px; font-weight: 600; color:var(--tx-s);" id="clock">—</span>
+    </div>
+  </div>
+
+  <!-- ══════ 1. 종합 대시보드 ══════ -->
+  <div class="content active" id="pg-dashboard">
+    <div class="metrics" id="dash-kpi"></div>
+    <div class="row2">
+      <div class="card" style="display:flex; flex-direction:column;">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-alert-circle" style="color:var(--tx-d);"></i>오늘의 실시간 조치 현황</span></div>
+        <div id="dash-actions" class="action-row" style="flex:1;"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-calendar-due"></i>긴급 납기 일정 현황 (30일 이내)</span></div>
+        <div id="dash-deadlines" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+    <div class="row3">
+      <div class="card">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-package-import"></i>전체 자재 발주 처리 비율</span></div>
+        <div class="cw cw-220"><canvas id="c-mat-donut"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-chart-bar"></i>지시 대비 생산량 실적</span></div>
+        <div class="cw cw-220"><canvas id="c-prod-performance"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-building-community"></i>수주 업체별 실시간 상태 요약</span></div>
+        <div id="dash-clients-overview" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 2. 수주 관리 ══════ -->
+  <div class="content" id="pg-clients">
+    <div class="sum-row" id="client-summary"></div>
+    <div class="sec-lbl"><i class="ti ti-building-community"></i>수주 의뢰 업체 및 상세 품목 현황</div>
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openClientAdd()"><i class="ti ti-plus"></i>의뢰 업체 등록</button>
+      <button class="btn" onclick="exportClientsCSV()"><i class="ti ti-download"></i>엑셀 CSV 내보내기</button>
+    </div>
+    <div id="client-list"></div>
+  </div>
+
+  <!-- ══════ 3. 자재 발주 관리 ══════ -->
+  <div class="content" id="pg-materials">
+    <div class="metrics" id="mat-kpi"></div>
+    <div class="toolbar">
+      <select id="mat-fc" onchange="onMatClientChange()" style="min-width:140px;"></select>
+      <select id="mat-fp" onchange="renderMaterials()" style="min-width:170px;"><option value="">전체 제품 목록</option></select>
+      <select id="mat-fs" onchange="renderMaterials()"><option value="">전체 입고 상태</option><option>발주전</option><option>발주</option><option>입고완료</option><option>지연</option></select>
+      <input type="text" id="mat-q" placeholder="자재명 또는 발주처 검색..." style="min-width:180px;" oninput="renderMaterials()">
+      <button class="btn btn-primary" onclick="openMatAdd()"><i class="ti ti-plus"></i>신규 자재 발주 요청</button>
+      <button class="btn" onclick="exportMatCSV()"><i class="ti ti-download"></i>엑셀 CSV 내보내기</button>
+    </div>
+    
+    <!-- 자재 발주 입력 패널 -->
+    <div class="add-panel" id="mat-add-panel">
+      <div class="panel-ttl clr-add" id="mat-add-ttl"><i class="ti ti-package-import"></i>자재 수급/발주 데이터 등록</div>
+      <div class="fg fg4">
+        <div class="ff"><label>자재 코드</label><input id="ma-id" readonly></div>
+        <div class="ff"><label>연결 고객사 *</label><select id="ma-client" onchange="onAddMatClientChange()"></select></div>
+        <div class="ff"><label>해당 품목 제품 *</label><select id="ma-product"></select></div>
+        <div class="ff"><label>자재명 명칭 *</label><input id="ma-name" placeholder="예: 서보모터용 하우징"></div>
+        <div class="ff"><label>자재 구매 공급처 *</label><input id="ma-supplier" placeholder="공급 협력사명"></div>
+        <div class="ff"><label>매입 단가 (원)</label><input id="ma-price" type="number" placeholder="0" min="0"></div>
+        <div class="ff"><label>수량</label><input id="ma-qty" type="number" placeholder="0" min="0"></div>
+        <div class="ff">
+          <label>단위 *</label>
+          <select id="ma-unit">
+            <option value="EA">EA</option>
+            <option value="대">대</option>
+            <option value="SET">SET</option>
+            <option value="kg">kg</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="BOX">BOX</option>
+            <option value="ton">ton</option>
+          </select>
+        </div>
+        <div class="ff"><label>발주 일자</label><input id="ma-odate" type="date"></div>
+        <div class="ff"><label>예상 입고 예정일</label><input id="ma-edate" type="date"></div>
+        <div class="ff"><label>입고 상황</label><select id="ma-status"><option>발주전</option><option>발주</option><option>입고완료</option><option>지연</option></select></div>
+        <div class="ff"><label>자재 특기 참고사항</label><input id="ma-note" placeholder="가공 도면 유무 등"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="togglePanel('mat-add-panel')">취소</button>
+        <button class="btn btn-primary" id="mat-save-btn" onclick="saveMaterialForm()"><i class="ti ti-check"></i>저장</button>
+      </div>
+    </div>
+    <div class="card"><div id="mat-table" style="overflow-x:auto;"></div></div>
+  </div>
+
+  <!-- ══════ 실시간 재고 관리 ══════ -->
+  <div class="content" id="pg-inventory">
+    <div class="metrics" id="inv-kpi"></div>
+    <div class="sec-lbl"><i class="ti ti-packages"></i>자재 및 제품 현장 재고 목록</div>
+    
+    <div class="toolbar">
+      <select id="inv-filter-type" onchange="renderInventory()" style="min-width:140px;">
+        <option value="">전체 재고 분류</option>
+        <option value="자재">자재 재고</option>
+        <option value="완제품">완제품 재고</option>
+        <option value="반제품">반제품 재고</option>
+      </select>
+      <select id="inv-filter-status" onchange="renderInventory()" style="min-width:140px;">
+        <option value="">전체 재고 상태</option>
+        <option value="normal">정상 수준</option>
+        <option value="low">안전재고 미달</option>
+      </select>
+      <input type="text" id="inv-q" placeholder="재고명, 보관위치 검색..." style="min-width:200px;" oninput="renderInventory()">
+      <button class="btn btn-primary" onclick="openInvAdd()"><i class="ti ti-plus"></i>신규 재고 품목 등록</button>
+      <button class="btn" onclick="exportInvCSV()"><i class="ti ti-download"></i>엑셀 CSV 내보내기</button>
+    </div>
+
+    <!-- 재고 추가/수정 패널 -->
+    <div class="add-panel" id="inv-add-panel">
+      <div class="panel-ttl clr-add" id="inv-add-ttl"><i class="ti ti-package"></i>현장 재고 자재 등록</div>
+      <div class="fg fg4">
+        <div class="ff"><label>재고 코드</label><input id="inva-id" readonly></div>
+        <div class="ff"><label>재고 품목명 *</label><input id="inva-name" placeholder="예: LM 가이드 레일"></div>
+        <div class="ff">
+          <label>재고 분류 *</label>
+          <select id="inva-type">
+            <option>자재</option>
+            <option>완제품</option>
+            <option>반제품</option>
+          </select>
+        </div>
+        <div class="ff">
+          <label>단위 *</label>
+          <select id="inva-unit">
+            <option value="EA">EA</option>
+            <option value="대">대</option>
+            <option value="SET">SET</option>
+            <option value="kg">kg</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="BOX">BOX</option>
+            <option value="ton">ton</option>
+          </select>
+        </div>
+        <div class="ff"><label>현재고 수량 *</label><input id="inva-qty" type="number" value="0" min="0"></div>
+        <div class="ff"><label>최소 안전 재고량 *</label><input id="inva-minQty" type="number" value="10" min="0"></div>
+        <div class="ff"><label>보관 위치/쉘프</label><input id="inva-location" placeholder="예: A-4 선반"></div>
+        <div class="ff"><label>참고사항</label><input id="inva-note" placeholder="제조사 사양 등"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="togglePanel('inv-add-panel')">취소</button>
+        <button class="btn btn-primary" id="inv-save-btn" onclick="saveInventoryForm()"><i class="ti ti-check"></i>저장</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="inventory-table" style="overflow-x:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ══════ 4. 생산 지시 등록 ══════ -->
+  <div class="content" id="pg-orders">
+    <div class="sum-row" id="orders-summary"></div>
+    <div class="toolbar">
+      <input type="text" id="orders-q" placeholder="지시번호, 담당자, 제품 검색..." style="min-width:200px;" oninput="renderOrders()">
+      <select id="orders-fs" onchange="renderOrders()"><option value="">전체 생산지시 상태</option><option>진행중</option><option>대기</option><option>완료</option><option>지연</option></select>
+      <button class="btn btn-primary" onclick="openOrderAdd()"><i class="ti ti-plus"></i>현장 생산 지시서 발행</button>
+      <button class="btn" onclick="exportOrdersCSV()"><i class="ti ti-download"></i>엑셀 CSV 내보내기</button>
+    </div>
+    
+    <!-- 지시서 등록 패널 -->
+    <div class="add-panel" id="o-panel">
+      <div class="panel-ttl clr-add" id="o-panel-ttl"><i class="ti ti-clipboard-plus"></i>생산 지시 기록 관리</div>
+      <div class="fg fg4">
+        <div class="ff"><label>지시 일련번호</label><input id="oa-id" readonly></div>
+        <div class="ff"><label>연결 고객사</label><select id="oa-client" onchange="onAddOrderClientChange()"></select></div>
+        <div class="ff"><label>생산 대상 제품</label><select id="oa-product"></select></div>
+        <div class="ff"><label>투입 설비 라인</label><select id="oa-line"><option>라인 A</option><option>라인 B</option><option>라인 C</option></select></div>
+        <div class="ff"><label>생산 목표량</label><input id="oa-qty" type="number" placeholder="0" min="0"></div>
+        <div class="ff"><label>현재 실적량</label><input id="oa-done" type="number" placeholder="0" min="0"></div>
+        <div class="ff"><label>작업 개시일</label><input id="oa-start" type="date"></div>
+        <div class="ff"><label>출하 납기 기한</label><input id="oa-due" type="date"></div>
+        <div class="ff"><label>작업 상태</label><select id="oa-status"><option>대기</option><option>진행중</option><option>완료</option><option>지연</option></select></div>
+        <div class="ff"><label>지시 감독자</label><input id="oa-mgr" placeholder="담당 현장 리더"></div>
+        <div class="ff" style="grid-column: span 2;"><label>작업 지시 사항 및 메모</label><input id="oa-note" placeholder="주의점 기재"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="togglePanel('o-panel')">취소</button>
+        <button class="btn btn-primary" id="o-save-btn" onclick="saveOrderForm()"><i class="ti ti-check"></i>저장</button>
+      </div>
+    </div>
+    <div class="card"><div id="orders-table" style="overflow-x:auto;"></div></div>
+  </div>
+
+  <!-- ══════ 5. 실시간 공정 관리 ══════ -->
+  <div class="content" id="pg-process">
+    <div class="metrics" id="proc-kpi"></div>
+    <div class="sec-lbl"><i class="ti ti-layout-kanban"></i>공정 단계별 흐름 제어 (카드를 클릭하여 상세 정보 변경)</div>
+    <div class="toolbar">
+      <select id="proc-fc" onchange="renderKanban()" style="min-width:150px;"></select>
+      <button class="btn" onclick="openProcStagePanel()"><i class="ti ti-settings"></i>공정 마일스톤 단계 커스텀</button>
+      <button class="btn" onclick="exportProcessCSV()"><i class="ti ti-download"></i>엑셀 CSV 내보내기</button>
+    </div>
+    
+    <div class="add-panel" id="proc-stage-panel">
+      <div class="panel-ttl clr-add" id="stage-panel-ttl"><i class="ti ti-list-numbers"></i>생산 공정 순서 커스텀 조정</div>
+      <div style="font-size:12px;color:var(--tx-s);margin-bottom:12px;">쉼표(,)를 사용해 공장 순번 흐름에 맞춰 순서대로 구분하여 작성해주십시오.</div>
+      <div class="fg fg2">
+        <div class="ff" style="grid-column:1/-1;"><label>공정 마일스톤 흐름 리스트</label><input id="stage-input" style="width:100%;"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="togglePanel('proc-stage-panel')">취소</button>
+        <button class="btn btn-primary" onclick="saveStages()"><i class="ti ti-check"></i>체계 저장 및 갱신</button>
+      </div>
+    </div>
+    <div id="kanban-board" class="kanban"></div>
+    <div class="sec-lbl" style="margin-top:24px;"><i class="ti ti-table"></i>실시간 제조 진행 제품 종합 현황표</div>
+    <div class="card"><div id="proc-detail-table" style="overflow-x:auto;"></div></div>
+  </div>
+
+  <!-- ══════ 6. 품질 및 검사 관리 ══════ -->
+  <div class="content" id="pg-quality">
+    <div class="metrics" id="qc-kpi"></div>
+    <div class="row2">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 기록 관리</span>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm" onclick="exportDefectsCSV()"><i class="ti ti-download"></i>CSV</button>
+            <button class="btn btn-sm btn-primary" onclick="openDefectAdd()"><i class="ti ti-plus"></i>불량 리포트</button>
+          </div>
+        </div>
+        
+        <!-- 불량 추가/수정 패널 -->
+        <div class="add-panel" id="defect-add-panel">
+          <div class="panel-ttl clr-add" id="df-add-ttl"><i class="ti ti-plus"></i>제조 과정 불량 상세 리포트</div>
+          <div class="fg fg3">
+            <div class="ff"><label>고유 식별 코드</label><input id="df-id" readonly></div>
+            <div class="ff"><label>발생일자</label><input id="df-date" type="date"></div>
+            <div class="ff"><label>발생 고객사</label><select id="df-client" onchange="onQcClientChange()"></select></div>
+            <div class="ff"><label>문제 발생 제품</label><select id="df-product"></select></div>
+            <div class="ff"><label>발생 당시 공정</label><select id="df-stage"></select></div>
+            <div class="ff"><label>불량 하자 유형 *</label><input id="df-type" placeholder="예: 조립 결합 유격"></div>
+            <div class="ff"><label>부적합 수량 *</label><input id="df-qty" type="number" placeholder="1" min="1"></div>
+            <div class="ff"><label>귀책 원인 파악</label><input id="df-cause" placeholder="가공 오차 누적 등"></div>
+            <div class="ff"><label>원인 긴급 조치 내용</label><input id="df-action" placeholder="부품 전량 폐기 후 재도포"></div>
+            <div class="ff"><label>조치 해결 상태</label><select id="df-status"><option>조치중</option><option>완료</option><option>보류</option></select></div>
+            <div class="ff" style="grid-column: span 2;"><label>부가 세부내용</label><input id="df-note" placeholder="참고사항"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn" onclick="togglePanel('defect-add-panel')">취소</button>
+            <button class="btn btn-primary" id="df-save-btn" onclick="addDefect()"><i class="ti ti-check"></i>저장 완료</button>
+          </div>
+        </div>
+        <div id="defect-table" style="overflow-x:auto;"></div>
+      </div>
+      
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>납품 후 고객사 클레임 내역</span>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm" onclick="exportClaimsCSV()"><i class="ti ti-download"></i>CSV</button>
+            <button class="btn btn-sm btn-primary" onclick="openClaimAdd()"><i class="ti ti-plus"></i>클레임 등록</button>
+          </div>
+        </div>
+        
+        <!-- 클레임 추가/수정 패널 -->
+        <div class="add-panel" id="claim-add-panel">
+          <div class="panel-ttl clr-add" id="cl-add-ttl"><i class="ti ti-plus"></i>신규 고객 클레임 등록</div>
+          <div class="fg fg3">
+            <div class="ff"><label>클레임 코드</label><input id="cl-id" readonly></div>
+            <div class="ff"><label>인입 접수일</label><input id="cl-date" type="date"></div>
+            <div class="ff"><label>클레임 제기처</label><select id="cl-client" onchange="fillProductSelect('cl-product', this.value)"></select></div>
+            <div class="ff"><label>클레임 대상 제품</label><select id="cl-product"></select></div>
+            <div class="ff" style="grid-column: 1 / -1;"><label>고객 불만 유형 및 상세 요구 내용 *</label><input id="cl-content" placeholder="구체적 클레임 피드백 사항"></div>
+            <div class="ff"><label>클레임 처리 상태</label><select id="cl-status"><option>접수</option><option>처리중</option><option>완료</option></select></div>
+            <div class="ff" style="grid-column: span 2;"><label>공장 실무자 피드백 조치 방안</label><input id="cl-response" placeholder="검토 조치 피드백"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn" onclick="togglePanel('claim-add-panel')">취소</button>
+            <button class="btn btn-primary" id="cl-save-btn" onclick="addClaim()"><i class="ti ti-check"></i>기록 접수</button>
+          </div>
+        </div>
+        <div id="claim-table" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-ttl"><i class="ti ti-clipboard-check"></i>최종 출하 납품 전수/샘플링 체크리스트</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-sm" onclick="exportChecksCSV()"><i class="ti ti-download"></i>CSV 내보내기</button>
+          <button class="btn btn-sm btn-primary" onclick="openCheckAdd()"><i class="ti ti-plus"></i>검사 기록 추가</button>
+        </div>
+      </div>
+      <div id="check-table" style="overflow-x:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ══════ 7. 작업 인력 및 출석 관리 ══════ -->
+  <div class="content" id="pg-workers">
+    <div class="metrics">
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-users"></i>전체 현장 등록 근무자</div><div class="mc-val" id="w-total">—</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-user-check"></i>현 시간 조업 실근무</div><div class="mc-val" id="w-att">—</div><div class="mc-sub" id="w-abs">—</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-8"></i>평균 누적 조업시간 (주)</div><div class="mc-val">42.8h</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-chart-line"></i>인적 자원 가동 효율</div><div class="mc-val">94.2%</div><div class="mc-sub up">▲ 전 분기 대비 +2.4%</div></div>
+    </div>
+    
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-ttl"><i class="ti ti-users"></i>근무 조업 및 출퇴근 상황 실시간 관리</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-sm" onclick="exportWorkersCSV()"><i class="ti ti-download"></i>CSV 내보내기</button>
+          <button class="btn btn-sm btn-primary" onclick="togglePanel('w-add-panel')"><i class="ti ti-plus"></i>신규 작업자 영입</button>
+        </div>
+      </div>
+      
+      <!-- 인력 등록 패널 -->
+      <div class="add-panel" id="w-add-panel">
+        <div class="panel-ttl clr-add" id="wa-add-ttl"><i class="ti ti-user-plus"></i>현장 인력 프로필 등록</div>
+        <div class="fg fg4">
+          <div class="ff"><label>작업원 사번</label><input id="wa-id" readonly></div>
+          <div class="ff"><label>성함 *</label><input id="wa-name" placeholder="홍길동"></div>
+          <div class="ff"><label>배정 라인</label><select id="wa-line"><option>A</option><option>B</option><option>C</option></select></div>
+          <div class="ff"><label>담당 공정 부문</label><input id="wa-role" placeholder="가공 / 조립 / 검사 / 유통"></div>
+          <div class="ff"><label>출퇴근 현황</label><select id="wa-status"><option>근무중</option><option>정비지원</option><option>결근</option><option>휴가</option></select></div>
+          <div class="ff"><label>출근 시간 기록</label><input id="wa-in" placeholder="08:00"></div>
+          <div class="ff"><label>연장 특근 조업 (시간)</label><input id="wa-ot" placeholder="0h"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn" onclick="togglePanel('w-add-panel')">취소</button>
+          <button class="btn btn-primary" onclick="addWorker()"><i class="ti ti-check"></i>인력 정보 등록</button>
+        </div>
+      </div>
+      <div id="workers-table" style="overflow-x:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ══════ 8. 알림 로그 관리 ══════ -->
+  <div class="content" id="pg-alerts">
+    <div class="toolbar" id="alerts-toolbar">
+      <button class="btn btn-primary" onclick="filterAlerts('all')">전체 알림</button>
+      <button class="btn" onclick="filterAlerts('err')">긴급 위험 (Err)</button>
+      <button class="btn" onclick="filterAlerts('warn')">경고 확인 (Warn)</button>
+    </div>
+    <div id="alerts-list"></div>
+  </div>
+
+  <!-- ══════ 9. 휴지통 ══════ -->
+  <div class="content" id="pg-trash">
+    <div class="metrics">
+      <div class="mc">
+        <div class="mc-lbl"><i class="ti ti-trash"></i>휴지통 보관 항목</div>
+        <div class="mc-val" id="trash-total">0건</div>
+        <div class="mc-sub">실수로 삭제된 모든 제조 데이터를 즉각 복구합니다.</div>
+      </div>
+      <div class="mc">
+        <div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>데이터 보존 기준</div>
+        <div class="mc-val">영구 보존</div>
+        <div class="mc-sub">브라우저 로컬 저장소 용량 내에서 유지</div>
+      </div>
+    </div>
+    
+    <div class="toolbar">
+      <select id="trash-filter-type" onchange="renderTrash()" style="min-width:140px;">
+        <option value="">전체 데이터 분류</option>
+        <option value="client">고객사</option>
+        <option value="product">완제품</option>
+        <option value="material">발주자재</option>
+        <option value="inventory">재고품목</option>
+        <option value="order">생산지시</option>
+        <option value="defect">불량기록</option>
+        <option value="claim">고객클레임</option>
+        <option value="check">검사기록</option>
+        <option value="worker">작업원</option>
+      </select>
+      <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
+      <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기 (영구 삭제)</button>
+    </div>
+
+    <div class="card">
+      <div id="trash-table" style="overflow-x:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════ 로컬 스토리지 연동 및 초기 데이터 정의 ════════ */
+const defaultClients = [
+  {id:'CL-001',name:'현대리바트',manager:'김영수',tel:'031-1234-5678',email:'kim@hyundai-livart.co.kr',date:'2026-05-01',note:''},
+  {id:'CL-002',name:'한샘',manager:'이민정',tel:'02-3455-6789',email:'lee@hanssem.com',date:'2026-05-05',note:''},
+  {id:'CL-003',name:'시디즈',manager:'박준혁',tel:'032-789-0123',email:'park@sidiz.com',date:'2026-05-10',note:''},
+];
+
+const defaultProducts = [
+  {id:'PR-001',clientId:'CL-001',name:'등판내구성 시험기',spec:'ISO 7173',qty:2,unit:'대',price:8500000,deliveryDate:'2026-07-15',status:'생산중',processStage:'조립',processMemo:'볼스크류 입고 후 조립 완료 예정',note:''},
+  {id:'PR-002',clientId:'CL-001',name:'좌판시험기',spec:'KS G 2016',qty:1,unit:'대',price:6200000,deliveryDate:'2026-07-30',status:'자재준비',processStage:'자재발주',processMemo:'PLC 납기 확인 필요',note:''},
+  {id:'PR-003',clientId:'CL-001',name:'팔걸이 내구성 시험기',spec:'EN 581',qty:1,unit:'대',price:5800000,deliveryDate:'2026-08-15',status:'설계중',processStage:'설계/도면',processMemo:'',note:''},
+  {id:'PR-004',clientId:'CL-002',name:'높이조절 내구성 시험기',spec:'BIFMA X5.1',qty:3,unit:'대',price:7200000,deliveryDate:'2026-08-01',status:'자재준비',processStage:'자재발주',processMemo:'',note:''},
+  {id:'PR-005',clientId:'CL-002',name:'회전 내구성 시험기',spec:'BIFMA X5.1',qty:2,unit:'대',price:5500000,deliveryDate:'2026-08-20',status:'견적',processStage:'설계/도면',processMemo:'',note:''},
+  {id:'PR-006',clientId:'CL-003',name:'좌면압력 분포 측정기',spec:'맞춤 사양',qty:1,unit:'대',price:12000000,deliveryDate:'2026-09-01',status:'견적',processStage:'설계/도면',processMemo:'',note:''},
+];
+
+const defaultMaterials = [
+  {id:'MT-001',productId:'PR-001',name:'각파이프 40×40×2T',supplier:'동국제강',unitPrice:15000,qty:12,unit:'M',orderDate:'2026-05-10',expectedDate:'2026-05-20',status:'입고완료',note:''},
+  {id:'MT-002',productId:'PR-001',name:'볼스크류 SFU1605',supplier:'삼익THK',unitPrice:85000,qty:2,unit:'EA',orderDate:'2026-05-10',expectedDate:'2026-05-25',status:'발주',note:''},
+  {id:'MT-003',productId:'PR-001',name:'선반가공품 A형',supplier:'정밀기계공업사',unitPrice:45000,qty:4,unit:'EA',orderDate:'2026-05-12',expectedDate:'2026-05-28',status:'발주',note:'도면 전달 완료'},
+  {id:'MT-004',productId:'PR-001',name:'LM가이드 MGN12H',supplier:'삼익THK',unitPrice:32000,qty:4,unit:'EA',orderDate:'2026-05-10',expectedDate:'2026-05-22',status:'입고완료',note:''},
+  {id:'MT-005',productId:'PR-001',name:'서보모터 200W',supplier:'LS산전',unitPrice:185000,qty:1,unit:'EA',orderDate:'',expectedDate:'2026-06-02',status:'발주전',note:'스펙 확인 필요'},
+  {id:'MT-006',productId:'PR-001',name:'알루미늄 프로파일 40×40',supplier:'알파알루미늄',unitPrice:8500,qty:20,unit:'M',orderDate:'',expectedDate:'2026-05-25',status:'발주전',note:''},
+  {id:'MT-007',productId:'PR-002',name:'각파이프 50×50×3T',supplier:'동국제강',unitPrice:22000,qty:8,unit:'M',orderDate:'2026-05-15',expectedDate:'2026-05-25',status:'발주',note:''},
+  {id:'MT-008',productId:'PR-002',name:'유압실린더 50×150',supplier:'진영유압',unitPrice:125000,qty:1,unit:'EA',orderDate:'2026-05-15',expectedDate:'2026-05-30',status:'발주',note:''},
+  {id:'MT-009',productId:'PR-002',name:'로드셀 500kgf',supplier:'CAS',unitPrice:98000,qty:1,unit:'EA',orderDate:'',expectedDate:'',status:'발주전',note:''},
+  {id:'MT-010',productId:'PR-002',name:'PLC 미쯔비시 FX3U',supplier:'미쯔비시전기',unitPrice:320000,qty:1,unit:'EA',orderDate:'',expectedDate:'',status:'발주전',note:'납기 6주 확인필요'},
+  {id:'MT-011',productId:'PR-004',name:'스텝모터 Nema23',supplier:'오리엔탈모터',unitPrice:75000,qty:3,unit:'EA',orderDate:'2026-05-18',expectedDate:'2026-05-28',status:'발주',note:''},
+  {id:'MT-012',productId:'PR-004',name:'볼스크류 SFU2005',supplier:'삼익THK',unitPrice:95000,qty:3,unit:'EA',orderDate:'2026-05-18',expectedDate:'2026-05-30',status:'발주',note:''},
+  {id:'MT-013',productId:'PR-004',name:'철판 레이저컷팅',supplier:'강남레이저',unitPrice:35000,qty:6,unit:'EA',orderDate:'',expectedDate:'',status:'발주전',note:'도면 작성중'},
+];
+
+const defaultWorkOrders = [
+  {id:'WO-001',clientId:'CL-001',productId:'PR-001',line:'라인 A',qty:2,done:1,defect:0,start:'2026-05-20',due:'2026-07-15',status:'진행중',manager:'김민준',note:''},
+  {id:'WO-002',clientId:'CL-001',productId:'PR-002',line:'라인 B',qty:1,done:0,defect:0,start:'2026-06-01',due:'2026-07-30',status:'대기',manager:'이서연',note:'자재 입고 후 시작'},
+  {id:'WO-003',clientId:'CL-002',productId:'PR-004',line:'라인 A',qty:3,done:0,defect:0,start:'2026-06-10',due:'2026-08-01',status:'대기',manager:'최유진',note:''},
+];
+
+const defaultWorkers = [
+  {id:'E-001',name:'김민준',line:'A',role:'조립',tin:'08:00',ot:'1.5h',status:'근무중'},
+  {id:'E-002',name:'이서연',line:'A',role:'가공',tin:'08:00',ot:'0h',status:'근무중'},
+  {id:'E-003',name:'박지호',line:'B',role:'검사',tin:'08:00',ot:'0h',status:'정비지원'},
+  {id:'E-004',name:'최유진',line:'C',role:'조립',tin:'08:00',ot:'2.0h',status:'근무중'},
+];
+
+const defaultDefects = [
+  {id:'DF-001',productId:'PR-001',date:'2026-05-18',stage:'가공/제작',type:'치수 불량',qty:1,cause:'공구 마모',action:'재가공',status:'완료',note:''},
+  {id:'DF-002',productId:'PR-001',date:'2026-05-20',stage:'조립',type:'체결 불량',qty:2,cause:'토크 미달',action:'재조립',status:'조치중',note:''},
+];
+
+const defaultClaims = [
+  {id:'CLM-001',date:'2026-05-15',clientId:'CL-001',productId:'PR-001',content:'납품 부품 모서리 마감 미흡',status:'처리중',response:'현장 출장 디버링 예정'},
+];
+
+const defaultCheckRecords = [
+  {id:'CHK-001',date:'2026-05-21',clientId:'CL-001',productId:'PR-001',inspector:'김기정',visual:'합격',dim:'합격',func:'합격',result:'합격',note:'최종 승인 검수 완료'}
+];
+
+const defaultAlerts = [
+  {type:'err',title:'MT-005 서보모터 발주 필요 — 등판내구성 시험기 납기 임박',sub:'예상 입고일 06/02 · 아직 발주 전'},
+  {type:'err',title:'MT-009, MT-010 로드셀·PLC 발주 미처리 — 좌판시험기',sub:'입고 예정일 미설정 · 즉시 발주 필요'},
+  {type:'warn',title:'MT-013 철판 레이저컷팅 발주전 — 도면 작성 중',sub:'높이조절 내구성 시험기 납기 08/01'},
+];
+
+const defaultInventory = [
+  {id:'INV-001',name:'각파이프 40×40×2T',type:'자재',qty:120,unit:'M',minQty:50,location:'A동 자재랙 1열',note:'동국제강'},
+  {id:'INV-002',name:'서보모터 200W',type:'자재',qty:3,unit:'EA',minQty:5,location:'B동 전자소자 보관함',note:'안전재고 부족 경보!'},
+  {id:'INV-003',name:'등판내구성 시험기 프레임',type:'반제품',qty:12,unit:'SET',minQty:3,location:'용접장 임시 보관 구역',note:''},
+  {id:'INV-004',name:'좌판시험기 완제품',type:'완제품',qty:2,unit:'대',minQty:0,location:'출하 완제품 대기 구역',note:''}
+];
+
+// 로컬 스토리지 키 관리 및 복구
+function loadStorage(key, defaultVal) {
+  const data = localStorage.getItem('mes_' + key);
+  return data ? JSON.parse(data) : defaultVal;
+}
+function saveStorage(key, data) {
+  localStorage.setItem('mes_' + key, JSON.stringify(data));
+}
+
+let clients = loadStorage('clients', defaultClients);
+let products = loadStorage('products', defaultProducts);
+let materials = loadStorage('materials', defaultMaterials);
+let workOrders = loadStorage('workOrders', defaultWorkOrders);
+let workers = loadStorage('workers', defaultWorkers);
+let defects = loadStorage('defects', defaultDefects);
+let claims = loadStorage('claims', defaultClaims);
+let checkRecords = loadStorage('checkRecords', defaultCheckRecords);
+let alertsList = loadStorage('alerts', defaultAlerts);
+let inventory = loadStorage('inventory', defaultInventory);
+let processStages = loadStorage('stages', ['설계/도면','자재발주','가공/제작','조립','배선/전기','검사/시험','출하완료']);
+let trash = loadStorage('trash', []);
+
+/* ════════ 앱 내부 글로벌 상태 및 권한 제어 변수 ════════ */
+const charts = {};
+let editClientId = null, editProductId = null, editMatId = null, editOrderId = null, editInvId = null;
+let editDefectId = null, editClaimId = null, editCheckId = null;
+let currentSelectedKanbanProductId = null;
+let expandedClients = new Set(['CL-001']);
+let currentPage = 'dashboard';
+let currentAlertFilter = 'all';
+
+// 관리자 자격 증명 전역 상태 변수 및 동적 비밀번호 로드
+let isAdmin = loadStorage('isAdmin', false);
+let adminPassword = loadStorage('adminPassword', '1234');
+let pendingAdminCallback = null;
+
+// 드래그 앤 드롭 글로벌 변수
+let draggedClientId = null;
+
+/* ════════ HELPERS ════════ */
+const GC_Dark = 'rgba(255,255,255,.06)';
+const GC_Light = 'rgba(0,0,0,.05)';
+const TC_Dark = '#868e96';
+const TC_Light = '#495057';
+
+function isDark() { return document.documentElement.classList.contains('dark'); }
+function getGridColor() { return isDark() ? GC_Dark : GC_Light; }
+function getTextColor() { return isDark() ? TC_Dark : TC_Light; }
+
+// 커스텀 알림 토스트 (alert 대신 사용)
+function showToast(message, type = 'success') {
+  const container = inp('toast-container');
+  if (!container) return;
+  
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  
+  let icon = 'ti-circle-check';
+  if (type === 'error') icon = 'ti-circle-x';
+  else if (type === 'info') icon = 'ti-info-circle';
+  
+  toast.innerHTML = `<i class="ti ${icon}"></i><span>${message}</span>`;
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'toastIn 0.25s reverse ease-out';
+    setTimeout(() => { toast.remove(); }, 240);
+  }, 3000);
+}
+
+function fmt(n) { return Number(n).toLocaleString('ko-KR'); }
+function fmtW(n) {
+  if (n >= 100000000) return `₩${(Math.round(n/1000000)/100).toFixed(2)}억`;
+  if (n >= 10000) return `₩${Math.round(n/10000)}만`;
+  return `₩${fmt(n)}`;
+}
+function today() { return new Date().toISOString().slice(0,10); }
+function daysUntil(d) {
+  if (!d) return 999;
+  return Math.ceil((new Date(d) - new Date(today())) / 86400000);
+}
+function dayBadge(d) {
+  const n = daysUntil(d);
+  if (n < 0) return `<span class="day-badge day-urgent">D+${-n} 경과</span>`;
+  if (n === 0) return `<span class="day-badge day-urgent">D-Day</span>`;
+  if (n <= 14) return `<span class="day-badge day-urgent">D-${n}</span>`;
+  if (n <= 30) return `<span class="day-badge day-warn">D-${n}</span>`;
+  return `<span class="day-badge day-ok">D-${n}</span>`;
+}
+function v(id) { return document.getElementById(id)?.value || ''; }
+function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function inp(id) { return document.getElementById(id); }
+
+function nextCode(prefix, list, field='id') {
+  const nums = list.map(x => parseInt((x[field] || '').split('-').pop()) || 0);
+  return `${prefix}-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
+}
+function getClientName(id) { return clients.find(c => c.id === id)?.name || id; }
+function getProductById(id) { return products.find(p => p.id === id); }
+function getProductName(id) { return getProductById(id)?.name || id; }
+function getMatAmt(m) { return m.unitPrice * m.qty; }
+
+function statusBadge(s) {
+  const m = {
+    '생산중': 'bd-info', '진행중': 'bd-info', '발주': 'bd-info', '접수': 'bd-info', '처리중': 'bd-info',
+    '완료': 'bd-ok', '입고완료': 'bd-ok', '합격': 'bd-ok', '근무중': 'bd-ok',
+    '자재준비': 'bd-warn', '대기': 'bd-neu', '발주전': 'bd-neu', '견적': 'bd-neu', '설계중': 'bd-neu',
+    '조치중': 'bd-warn', '지연': 'bd-err', '납기지연': 'bd-err', '결근': 'bd-err', '불합격': 'bd-err',
+    '조건부합격': 'bd-warn', '정비지원': 'bd-warn', '휴가': 'bd-neu', '보류': 'bd-neu'
+  };
+  return `<span class="bd ${m[s] || 'bd-neu'}">${s}</span>`;
+}
+
+function pctBar(done, qty, w=60) {
+  const p = qty > 0 ? Math.min(100, Math.round(done/qty*100)) : 0;
+  const c = p === 100 ? '#37b24d' : p >= 70 ? '#185FA5' : '#f76707';
+  return `
+    <div style="display:flex; align-items:center; gap:6px;">
+      <div class="pb" style="width:${w}px;"><div class="pf" style="width:${p}%; background:${c};"></div></div>
+      <span style="font-size:11px; font-weight:600; width:30px;">${p}%</span>
+    </div>`;
+}
+
+function empty(msg='데이터 정보가 존재하지 않습니다.') {
+  return `<div class="empty"><i class="ti ti-inbox"></i>${msg}</div>`;
+}
+
+/* ════════ 관리자 권한 제어 코어 프로세스 ════════ */
+function promptAdmin(callback = null) {
+  pendingAdminCallback = callback;
+  sv('adminPasswordInput', '');
+  inp('adminAuthError').style.display = 'none';
+  inp('adminAuthModal').classList.add('open');
+  setTimeout(() => inp('adminPasswordInput')?.focus(), 150);
+}
+
+function closeAdminAuth() {
+  inp('adminAuthModal').classList.remove('open');
+  pendingAdminCallback = null;
+}
+
+function verifyAdminPassword() {
+  const pw = v('adminPasswordInput');
+  if (pw === adminPassword) {
+    isAdmin = true;
+    saveStorage('isAdmin', true);
+    showToast('관리자 인증에 성공하였습니다.', 'success');
+    closeAdminAuth();
+    updateAdminUI();
+    if (pendingAdminCallback) {
+      const cb = pendingAdminCallback;
+      pendingAdminCallback = null;
+      cb();
+    }
+  } else {
+    inp('adminAuthError').style.display = 'block';
+    inp('adminPasswordInput').focus();
+    showToast('비밀번호가 올바르지 않습니다.', 'error');
+  }
+}
+
+function lockAdmin() {
+  isAdmin = false;
+  saveStorage('isAdmin', false);
+  showToast('관리자 모드가 해제(잠금)되었습니다.', 'info');
+  updateAdminUI();
+}
+
+// 관리자 비밀번호 변경 처리
+function openAdminPasswordChange() {
+  sv('currentPasswordInput', '');
+  sv('newPasswordInput', '');
+  sv('newPasswordConfirmInput', '');
+  inp('adminPasswordChangeModal').classList.add('open');
+  setTimeout(() => inp('currentPasswordInput')?.focus(), 150);
+}
+
+function closeAdminPasswordChange() {
+  inp('adminPasswordChangeModal').classList.remove('open');
+}
+
+function submitAdminPasswordChange() {
+  const currentPw = v('currentPasswordInput');
+  const newPw = v('newPasswordInput').trim();
+  const confirmPw = v('newPasswordConfirmInput').trim();
+
+  if (currentPw !== adminPassword) {
+    showToast('현재 비밀번호가 일치하지 않습니다.', 'error');
+    return;
+  }
+  if (!newPw) {
+    showToast('새 비밀번호를 입력해주세요.', 'error');
+    return;
+  }
+  if (newPw !== confirmPw) {
+    showToast('새 비밀번호와 확인용 비밀번호가 일치하지 않습니다.', 'error');
+    return;
+  }
+
+  adminPassword = newPw;
+  saveStorage('adminPassword', adminPassword);
+  showToast('관리자 비밀번호가 성공적으로 업데이트되었습니다.', 'success');
+  closeAdminPasswordChange();
+}
+
+function updateAdminUI() {
+  const topbarRight = inp('topbar-admin-area');
+  if (topbarRight) {
+    if (isAdmin) {
+      topbarRight.innerHTML = `
+        <span class="pill pill-ok" style="border-radius: 6px;"><i class="ti ti-lock-open"></i> 관리자</span>
+        <button class="btn btn-sm" onclick="openAdminPasswordChange()" title="비밀번호 변경" style="height: 26px; padding: 0 8px; margin-right: 4px;"><i class="ti ti-key"></i> 변경</button>
+        <button class="btn btn-sm btn-danger" onclick="lockAdmin()" title="관리자 권한 잠금" style="height: 26px; padding: 0 8px;"><i class="ti ti-lock"></i> 잠금</button>
+      `;
+    } else {
+      topbarRight.innerHTML = `
+        <button class="btn btn-sm btn-primary" onclick="promptAdmin()" title="관리자 모드 활성화" style="height: 26px; padding: 0 8px;"><i class="ti ti-shield-lock"></i> 관리자 인증</button>
+      `;
+    }
+  }
+  refreshPage(currentPage);
+}
+
+function checkAdminAction(fn = null) {
+  if (!isAdmin) {
+    promptAdmin(fn);
+    return false;
+  }
+  if (fn) fn();
+  return true;
+}
+
+/* ════════ UI 패널 및 대화창 조작 ════════ */
+function togglePanel(id) {
+  const p = inp(id); if (!p) return;
+  const was = p.classList.contains('open');
+  document.querySelectorAll(`#pg-${currentPage} .add-panel.open`).forEach(x => x.classList.remove('open'));
+  if (!was) {
+    p.classList.add('open');
+    setTimeout(() => { const f = p.querySelector('input:not([readonly]), select, textarea'); if (f) f.focus(); }, 120);
+  }
+}
+function closePanel(id) { inp(id)?.classList.remove('open'); }
+
+let _cfn = null;
+function confirm_(title, msg, fn, btnCls = 'btn-danger', btnIcon = 'ti-trash') {
+  _cfn = fn;
+  inp('dlgTitle').textContent = title;
+  inp('dlgMsg').innerHTML = msg;
+  const okBtn = inp('dlgOkBtn');
+  okBtn.className = `btn ${btnCls}`;
+  okBtn.innerHTML = `<i class="ti ${btnIcon}"></i>실행`;
+  okBtn.onclick = () => { if (_cfn) _cfn(); closeDlg(); };
+  inp('confirmDlg').classList.add('open');
+}
+function closeDlg() { inp('confirmDlg').classList.remove('open'); _cfn = null; }
+
+function fillClientSelect(elId, includeAll=false) {
+  const el = inp(elId); if (!el) return;
+  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+function fillProductSelect(elId, clientId, selected='') {
+  const el = inp(elId); if (!el) return;
+  const list = clientId ? products.filter(p => p.clientId === clientId) : products;
+  el.innerHTML = '<option value="">-- 품목 선택 --</option>' + list.map(p => `<option value="${p.id}"${p.id===selected?' selected':''}>${p.name}</option>`).join('');
+}
+function fillStageSelect(elId) {
+  const el = inp(elId); if (!el) return;
+  el.innerHTML = processStages.map(s => `<option>${s}</option>`).join('');
+}
+
+function go(id, el) {
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+  inp('pg-' + id).classList.add('active');
+  
+  if (el) {
+    el.classList.add('active');
+  } else {
+    const navItems = document.querySelectorAll('.ni');
+    navItems.forEach(item => {
+      if (item.getAttribute('onclick')?.includes(`'${id}'`)) {
+        item.classList.add('active');
+      }
+    });
+  }
+
+  const PN = {
+    dashboard: '종합 대시보드', clients: '수주 정보 관리', materials: '자재 수급/발주',
+    orders: '생산 지시 등록', process: '실시간 공정 관리', quality: '품질 및 검사',
+    workers: '현장 작업원 관리', alerts: '시스템 알림 로그', inventory: '실시간 재고 관리',
+    trash: '휴지통 데이터 복구'
+  };
+  inp('ptitle').textContent = PN[id] || id;
+  currentPage = id;
+  refreshPage(id);
+}
+
+function refreshPage(id) {
+  if (id === 'dashboard') renderDashboard();
+  else if (id === 'clients') renderClients();
+  else if (id === 'materials') { syncFilterDropdowns(); renderMaterials(); }
+  else if (id === 'orders') renderOrders();
+  else if (id === 'process') renderProcess();
+  else if (id === 'quality') renderQuality();
+  else if (id === 'workers') renderWorkers();
+  else if (id === 'alerts') renderAlerts();
+  else if (id === 'inventory') renderInventory();
+  else if (id === 'trash') renderTrash();
+}
+
+/* ════════ 1. 종합 대시보드 시각화 ════════ */
+function renderDashboard() {
+  const pending = materials.filter(m => m.status === '발주전').length;
+  const orderMats = materials.filter(m => m.status === '발주').length;
+  const arrived = materials.filter(m => m.status === '입고완료').length;
+  const totalAmt = materials.reduce((s, m) => s + getMatAmt(m), 0);
+  const lowStockCount = inventory.filter(i => i.qty <= i.minQty).length;
+
+  inp('dash-kpi').innerHTML = `
+    <div class="mc clickable" onclick="go('materials')">
+      <div class="mc-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-t);"></i>발주 대기 자재</div>
+      <div class="mc-val text-muted">${pending}건</div>
+      <div class="mc-sub">빠른 발주 조치 가능</div>
+    </div>
+    <div class="mc clickable" onclick="go('materials')">
+      <div class="mc-lbl"><i class="ti ti-truck-delivery" style="color:var(--tx-i);"></i>외주 및 공급 발주중</div>
+      <div class="mc-val" style="color:var(--tx-i);">${orderMats}건</div>
+      <div class="mc-sub">정상 운송/입고 대기</div>
+    </div>
+    <div class="mc clickable" onclick="go('inventory')">
+      <div class="mc-lbl"><i class="ti ti-packages" style="color:${lowStockCount > 0 ? 'var(--tx-d)' : 'var(--tx-ok)'};"></i>부족 자재 알림</div>
+      <div class="mc-val" style="color:${lowStockCount > 0 ? 'var(--tx-d)' : 'var(--tx-ok)'};">${lowStockCount}개 품목</div>
+      <div class="mc-sub">최소 안전재고량 기준</div>
+    </div>
+    <div class="mc">
+      <div class="mc-lbl"><i class="ti ti-coin"></i>자재 구매 투자 총액</div>
+      <div class="mc-val" style="color:var(--tx-ok);">${fmtW(totalAmt)}</div>
+      <div class="mc-sub">입고 완료율 ${(materials.length ? (arrived/materials.length*100).toFixed(0) : 0)}%</div>
+    </div>`;
+
+  const actions = [];
+  materials.filter(m => m.status === '발주전').slice(0, 2).forEach(m => {
+    const pr = getProductById(m.productId);
+    actions.push({ cls: 'urgent', icon: 'ti-alert-circle', txt: `[자재발주 요청] ${m.name}`, sub: `${pr?.name || ''} 공정자재 · 미발주` });
+  });
+  materials.filter(m => m.status === '발주' && m.expectedDate && daysUntil(m.expectedDate) <= 7).slice(0, 2).forEach(m => {
+    actions.push({ cls: 'warn', icon: 'ti-truck-delivery', txt: `[입고임박] ${m.name} 완료대기`, sub: `${m.supplier} 공급 · ${m.expectedDate} 예정` });
+  });
+  defects.filter(d => d.status !== '완료').slice(0, 2).forEach(d => {
+    actions.push({ cls: 'urgent', icon: 'ti-shield-alert', txt: `[미처리 불량] ${d.type} 개선중`, sub: `${getProductName(d.productId)} · ${d.stage} 단계` });
+  });
+  inventory.filter(i => i.qty <= i.minQty).slice(0, 1).forEach(i => {
+    actions.push({ cls: 'urgent', icon: 'ti-package-off', txt: `[안전재고 미달] ${i.name}`, sub: `현재고 ${i.qty}${i.unit} (안전 수량 ${i.minQty}${i.unit}) - 위치: ${i.location || '미지정'}` });
+  });
+
+  inp('dash-actions').innerHTML = actions.length ? actions.map(a => `
+    <div class="action-item ${a.cls}">
+      <i class="ti ${a.icon}"></i>
+      <div>
+        <div class="action-txt">${a.txt}</div>
+        <div class="action-sub">${a.sub}</div>
+      </div>
+    </div>`).join('') : `
+    <div class="action-item info">
+      <i class="ti ti-circle-check"></i>
+      <div><div class="action-txt">현재 처리 대기 중인 긴급 장애 요인이 없습니다.</div></div>
+    </div>`;
+
+  const dl = products.filter(p => p.deliveryDate && p.status !== '견적' && p.processStage !== '출하완료').sort((a,b) => a.deliveryDate.localeCompare(b.deliveryDate));
+  inp('dash-deadlines').innerHTML = dl.length ? `
+    <table>
+      <thead>
+        <tr><th>고객사</th><th>제품명</th><th>납기일</th><th>남은일수</th><th>생산 상태</th></tr>
+      </thead>
+      <tbody>
+        ${dl.slice(0, 5).map(p => `
+          <tr>
+            <td style="font-weight:600;">${getClientName(p.clientId)}</td>
+            <td style="font-weight:600; color:var(--tx-i);">${p.name}</td>
+            <td>${p.deliveryDate}</td>
+            <td>${dayBadge(p.deliveryDate)}</td>
+            <td>${statusBadge(p.status)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>` : empty('현재 납기 일정이 걸려있는 제품군이 존재하지 않습니다.');
+
+  if (charts['c-mat-donut']) charts['c-mat-donut'].destroy();
+  const mCnt = { 발주전: 0, 발주: 0, 입고완료: 0, 지연: 0 };
+  materials.forEach(m => mCnt[m.status] = (mCnt[m.status] || 0) + 1);
+  const cEl = inp('c-mat-donut');
+  if (cEl) {
+    charts['c-mat-donut'] = new Chart(cEl, {
+      type: 'doughnut',
+      data: {
+        labels: ['발주전', '발주중', '입고완료', '지연'],
+        datasets: [{
+          data: [mCnt.발주전, mCnt.발주, mCnt.입고완료, mCnt.지연 || 0],
+          backgroundColor: ['#adb5bd', '#185FA5', '#37b24d', '#f03e3e'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: getTextColor(), font: { size: 10, family: 'var(--f)' }, padding: 8 } }
+        }
+      }
+    });
+  }
+
+  if (charts['c-prod-performance']) charts['c-prod-performance'].destroy();
+  const cEl2 = inp('c-prod-performance');
+  if (cEl2) {
+    const labels = workOrders.map(o => o.id);
+    const targetData = workOrders.map(o => o.qty);
+    const actData = workOrders.map(o => o.done);
+    charts['c-prod-performance'] = new Chart(cEl2, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: '목표량', data: targetData, backgroundColor: isDark() ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' },
+          { label: '생산량', data: actData, backgroundColor: '#185FA5' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: getTextColor(), font: { size: 10 } } } },
+        scales: {
+          x: { grid: { color: getGridColor() }, ticks: { color: getTextColor(), font: { size: 9 } } },
+          y: { grid: { color: getGridColor() }, ticks: { color: getTextColor(), font: { size: 9 } } }
+        }
+      }
+    });
+  }
+
+  inp('dash-clients-overview').innerHTML = `
+    <table>
+      <thead>
+        <tr><th>업체명</th><th>제품수</th><th>자재 미결</th><th>공정 마일스톤 현황</th></tr>
+      </thead>
+      <tbody>
+        ${clients.map(c => {
+          const prods = products.filter(p => p.clientId === c.id);
+          const mats = materials.filter(m => prods.some(p => p.id === m.productId));
+          const pre = mats.filter(m => m.status === '발주전').length;
+          return `
+            <tr>
+              <td style="font-weight:600;">${c.name}</td>
+              <td>${prods.length}종</td>
+              <td style="${pre > 0 ? 'color:var(--tx-d); font-weight:700;' : ''}">발주대기: ${pre}건</td>
+              <td>${prods.map(p => statusBadge(p.processStage === '출하완료' ? '완료' : p.status)).join(' ')}</td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* ════════ 2. 수주 및 제품 등록 관리 (드래그 앤 드롭 지원!) ════════ */
+function renderClients() {
+  const totAmt = products.reduce((s, p) => s + (p.price * p.qty), 0);
+  inp('client-summary').innerHTML = `
+    <div class="sum-box"><i class="ti ti-building-community si" style="color:var(--tx-i);"></i><div><div class="sn">${clients.length}</div><div class="sl">협약 고객사</div></div></div>
+    <div class="sum-box"><i class="ti ti-box si" style="color:#2b8a3e;"></i><div><div class="sn">${products.length}</div><div class="sl">품목 종류</div></div></div>
+    <div class="sum-box"><i class="ti ti-loader si" style="color:#e8590c;"></i><div><div class="sn">${products.filter(p=>p.status==='생산중').length}</div><div class="sl">실시간 조업</div></div></div>
+    <div class="sum-box"><i class="ti ti-coin si" style="color:var(--tx-i);"></i><div><div class="sn">${fmtW(totAmt)}</div><div class="sl">전체 수주 총계</div></div></div>`;
+
+  inp('client-list').innerHTML = clients.map(c => {
+    const prods = products.filter(p => p.clientId === c.id);
+    const isExp = expandedClients.has(c.id);
+    const editPanelId = `cedit-${c.id}`;
+    
+    return `
+      <div class="client-card ${isExp ? 'expanded' : ''}" 
+           id="card-${c.id}"
+           draggable="true"
+           ondragstart="onClientDragStart(event, '${c.id}')"
+           ondragover="onClientDragOver(event)"
+           ondragleave="onClientDragLeave(event)"
+           ondrop="onClientDrop(event, '${c.id}')"
+           ondragend="onClientDragEnd(event)">
+        <div class="client-hd" onclick="toggleClient('${c.id}')">
+          <div class="c-avatar">${c.name.slice(0, 2)}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:700;">${c.name}</div>
+            <div style="font-size:11.5px; color:var(--tx-t); font-weight: 500;">담당: ${c.manager || '미지정'} · 연락처: ${c.tel || '미지정'} · 생산제품: ${prods.length}종</div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;" onclick="event.stopPropagation();">
+            <button class="edit-btn" onclick="openClientEdit('${c.id}')"><i class="ti ti-edit"></i>수정</button>
+            <button class="del-btn" onclick="deleteClient('${c.id}')"><i class="ti ti-trash"></i></button>
+          </div>
+          <i class="ti ${isExp ? 'ti-chevron-up' : 'ti-chevron-down'}" style="color:var(--tx-t); font-size:16px; margin-left: 12px;"></i>
+        </div>
+        
+        <div class="client-body ${isExp ? 'open' : ''}">
+          <!-- 업체 수정 패널 -->
+          <div class="add-panel edit-mode" id="${editPanelId}">
+            <div class="panel-ttl clr-edit"><i class="ti ti-edit"></i>${c.name} 프로필 수정</div>
+            <div class="fg fg4">
+              <div class="ff"><label>업체명 *</label><input id="ce-name-${c.id}" value="${c.name}"></div>
+              <div class="ff"><label>실무자명</label><input id="ce-mgr-${c.id}" value="${c.manager}"></div>
+              <div class="ff"><label>전화번호</label><input id="ce-tel-${c.id}" value="${c.tel}"></div>
+              <div class="ff"><label>이메일</label><input id="ce-email-${c.id}" value="${c.email}"></div>
+              <div class="ff"><label>계약 수주일</label><input id="ce-date-${c.id}" type="date" value="${c.date}"></div>
+              <div class="ff" style="grid-column: span 3;"><label>특이사항 기입</label><input id="ce-note-${c.id}" value="${c.note}"></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn" onclick="closePanel('${editPanelId}')">취소</button>
+              <button class="btn btn-primary" onclick="saveClientEdit('${c.id}')"><i class="ti ti-device-floppy"></i>저장</button>
+            </div>
+          </div>
+          
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+            <span style="font-size:12.5px; font-weight:700; color:var(--tx-s);">품목 및 모델 리스트</span>
+            <button class="btn btn-sm btn-primary" onclick="openProdAdd('${c.id}')"><i class="ti ti-plus"></i>제품 등록 추가</button>
+          </div>
+          
+          <!-- 제품 추가 패널 -->
+          <div class="add-panel" id="pra-${c.id}">
+            <div class="panel-ttl clr-add" id="pra-ttl-${c.id}"><i class="ti ti-plus"></i>신규 완제품 등록</div>
+            <div class="fg fg4">
+              <div class="ff"><label>제품 코드</label><input id="pra-id-${c.id}" readonly></div>
+              <div class="ff"><label>제품명 *</label><input id="pra-name-${c.id}" placeholder="예: 의자 인장 시험기"></div>
+              <div class="ff"><label>설계 사양/규격</label><input id="pra-spec-${c.id}" placeholder="예: KS G 2016"></div>
+              <div class="ff"><label>납기 예정 기한</label><input id="pra-due-${c.id}" type="date"></div>
+              <div class="ff"><label>수량</label><input id="pra-qty-${c.id}" type="number" value="1" min="1"></div>
+              <div class="ff">
+                <label>출하 단위 *</label>
+                <select id="pra-unit-${c.id}">
+                  <option value="대">대</option>
+                  <option value="EA">EA</option>
+                  <option value="SET">SET</option>
+                  <option value="BOX">BOX</option>
+                </select>
+              </div>
+              <div class="ff"><label>수주 단가 (원)</label><input id="pra-price-${c.id}" type="number" value="0" min="0"></div>
+              <div class="ff"><label>기본 공정 단계</label><select id="pra-stage-${c.id}">${processStages.map(s => `<option>${s}</option>`).join('')}</select></div>
+              <div class="ff"><label>현재 마일스톤</label><select id="pra-status-${c.id}"><option>견적</option><option>설계중</option><option>자재준비</option><option>생산중</option><option>완료</option></select></div>
+              <div class="ff" style="grid-column: span 2;"><label>제품 특기사항</label><input id="pra-note-${c.id}"></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn" onclick="closePanel('pra-${c.id}')">취소</button>
+              <button class="btn btn-primary" id="pra-save-${c.id}" onclick="saveProd('${c.id}')"><i class="ti ti-check"></i>저장</button>
+            </div>
+          </div>
+          
+          ${prods.length ? `
+            <table style="min-width: 900px;">
+              <thead>
+                <tr>
+                  <th>코드</th><th>제품/규격명</th><th>납기기한</th><th>수량</th><th>수주 단가</th><th>수주 합계</th><th>마일스톤</th><th>상태</th><th>관리 작업</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${prods.map(p => `
+                  <tr>
+                    <td>${p.id}</td>
+                    <td style="font-weight:700;">${p.name} <span style="font-size:10px; color:var(--tx-t); font-weight:400; display:block;">${p.spec || '규격 없음'}</span></td>
+                    <td>${dayBadge(p.deliveryDate)} <span style="font-size:10.5px; display:block; color:var(--tx-t);">${p.deliveryDate}</span></td>
+                    <td>${p.qty}${p.unit}</td>
+                    <td class="amt-blue">${fmtW(p.price)}</td>
+                    <td style="font-weight:700; color:var(--tx-i);">${fmtW(p.price * p.qty)}</td>
+                    <td>
+                      <select class="stat-sel" onchange="changeProdStage('${p.id}', this.value)">
+                        ${processStages.map(s => `<option${s === p.processStage ? ' selected' : ''}>${s}</option>`).join('')}
+                      </select>
+                    </td>
+                    <td>
+                      <select class="stat-sel" onchange="changeProdStatus('${p.id}', this.value)">
+                        ${['견적','설계중','자재준비','생산중','완료','지연'].map(s => `<option${s === p.status ? ' selected' : ''}>${s}</option>`).join('')}
+                      </select>
+                    </td>
+                    <td>
+                      <button class="edit-btn" onclick="openProdEdit('${c.id}','${p.id}')"><i class="ti ti-edit"></i>수정</button>
+                      <button class="edit-btn" style="margin-left:4px;" onclick="navToMatForProduct('${p.id}')"><i class="ti ti-box"></i>자재</button>
+                      <button class="del-btn" style="margin-left:4px;" onclick="deleteProduct('${p.id}')"><i class="ti ti-trash"></i></button>
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background:var(--bg-s);">
+                  <td colspan="5" style="font-size:11px; font-weight:700;">해당 고객사 소계</td>
+                  <td style="font-weight:700; color:var(--tx-i);">${fmtW(prods.reduce((s, p) => s + p.price*p.qty, 0))}</td>
+                  <td colspan="3"></td>
+                </tr>
+              </tfoot>
+            </table>` : empty('현재 등록된 제조 품목이 없습니다. 우측 상단의 [제품 등록 추가] 버튼을 눌러 생성해주세요.')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* 드래그 앤 드롭(Drag & Drop) 관련 이벤트 핸들러 */
+function onClientDragStart(e, id) {
+  // 입력 필드, 드롭다운, 조작 버튼 클릭 시에는 드래그 동작이 무시되도록 예외 처리
+  const target = e.target;
+  if (target.closest('button') || target.closest('input') || target.closest('select') || target.closest('textarea') || target.closest('.edit-btn') || target.closest('.del-btn')) {
+    e.preventDefault();
+    return;
+  }
+  draggedClientId = id;
+  const currentCard = e.currentTarget;
+  currentCard.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+}
+
+function onClientDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const card = e.currentTarget.closest('.client-card');
+  if (card && draggedClientId && card.id !== `card-${draggedClientId}`) {
+    card.classList.add('drag-over');
+  }
+}
+
+function onClientDragLeave(e) {
+  const card = e.currentTarget.closest('.client-card');
+  if (card) {
+    card.classList.remove('drag-over');
+  }
+}
+
+function onClientDrop(e, targetId) {
+  e.preventDefault();
+  const card = e.currentTarget.closest('.client-card');
+  if (card) card.classList.remove('drag-over');
+
+  if (!draggedClientId || draggedClientId === targetId) return;
+
+  // 전체 고객사 데이터 배열 정렬 순서 업데이트
+  const draggedIndex = clients.findIndex(c => c.id === draggedClientId);
+  const targetIndex = clients.findIndex(c => c.id === targetId);
+
+  if (draggedIndex !== -1 && targetIndex !== -1) {
+    const [removed] = clients.splice(draggedIndex, 1);
+    clients.splice(targetIndex, 0, removed);
+    saveStorage('clients', clients);
+    renderClients();
+    showToast('수주처 목록의 순서가 변경되었습니다.', 'success');
+  }
+}
+
+function onClientDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.client-card').forEach(c => {
+    c.classList.remove('drag-over');
+    c.classList.remove('dragging');
+  });
+  draggedClientId = null;
+}
+
+function openClientEdit(id) {
+  if (!checkAdminAction()) return;
+  const panelId = `cedit-${id}`;
+  const p = inp(panelId); if (!p) return;
+  const wasOpen = p.classList.contains('open');
+  document.querySelectorAll('.add-panel.open').forEach(x => x.classList.remove('open'));
+  if (!wasOpen) p.classList.add('open');
+}
+
+function saveClientEdit(id) {
+  if (!checkAdminAction()) return;
+  const c = clients.find(x => x.id === id); if (!c) return;
+  const name = inp(`ce-name-${id}`)?.value.trim();
+  if (!name) { showToast('업체명은 비워둘 수 없습니다.', 'error'); return; }
+  c.name = name;
+  c.manager = inp(`ce-mgr-${id}`)?.value || '';
+  c.tel = inp(`ce-tel-${id}`)?.value || '';
+  c.email = inp(`ce-email-${id}`)?.value || '';
+  c.date = inp(`ce-date-${id}`)?.value || '';
+  c.note = inp(`ce-note-${id}`)?.value || '';
+  saveStorage('clients', clients);
+  renderClients();
+  syncFilterDropdowns();
+  showToast('고객사 상세 프로필이 성공적으로 변경되었습니다.');
+}
+
+function openClientAdd() {
+  if (!checkAdminAction()) return;
+  inp('ca-panel-ttl').innerHTML = '<i class="ti ti-building-plus"></i>신규 의뢰 고객사 정보 등록';
+  inp('ca-save-btn').innerHTML = '<i class="ti ti-check"></i>저장';
+  inp('ca-save-btn').setAttribute('onclick', 'saveClient()');
+  sv('ca-id', nextCode('CL', clients));
+  ['ca-name', 'ca-mgr', 'ca-tel', 'ca-email', 'ca-note'].forEach(id => sv(id, ''));
+  sv('ca-date', today());
+  togglePanel('ca-panel');
+}
+
+function saveClient() {
+  if (!checkAdminAction()) return;
+  const name = v('ca-name').trim();
+  if (!name) { showToast('업체 고객사 명칭은 필수 입력 필드입니다.', 'error'); return; }
+  const id = nextCode('CL', clients);
+  clients.push({
+    id, name,
+    manager: v('ca-mgr'),
+    tel: v('ca-tel'),
+    email: v('ca-email'),
+    date: v('ca-date'),
+    note: v('ca-note')
+  });
+  saveStorage('clients', clients);
+  expandedClients.add(id);
+  closePanel('ca-panel');
+  renderClients();
+  syncFilterDropdowns();
+  showToast('신규 고객사 정보 등록이 완료되었습니다.');
+}
+
+function deleteClient(id) {
+  if (!checkAdminAction()) return;
+  const c = clients.find(x => x.id === id);
+  if (!c) return;
+  const pCount = products.filter(p => p.clientId === id).length;
+  confirm_('고객 협력사 정보 영구 삭제', `정말로 <strong>[${c.name}]</strong>사를 시스템에서 제거하시겠습니까?<br>연결된 품목 <strong>${pCount}종 및 자재 발주 정보</strong>가 전부 휴지통으로 이동합니다.`, () => {
+    const clientProducts = products.filter(p => p.clientId === id);
+    const pIds = clientProducts.map(p => p.id);
+    const clientMaterials = materials.filter(m => pIds.includes(m.productId));
+    const clientOrders = workOrders.filter(w => w.clientId === id);
+
+    const cascade = {
+      products: clientProducts,
+      materials: clientMaterials,
+      workOrders: clientOrders
+    };
+    pushToTrash('client', `${c.name} (고객사 및 하위 완제품 ${pCount}종)`, id, c, cascade);
+
+    clients = clients.filter(x => x.id !== id);
+    products = products.filter(p => p.clientId !== id);
+    materials = materials.filter(m => !pIds.includes(m.productId));
+    workOrders = workOrders.filter(w => w.clientId !== id);
+    expandedClients.delete(id);
+
+    saveStorage('clients', clients);
+    saveStorage('products', products);
+    saveStorage('materials', materials);
+    saveStorage('workOrders', workOrders);
+
+    renderClients();
+    syncFilterDropdowns();
+    showToast('고객사 및 하위 데이터가 휴지통으로 이동했습니다.', 'info');
+  });
+}
+
+function openProdAdd(clientId) {
+  if (!checkAdminAction()) return;
+  const panelId = `pra-${clientId}`;
+  sv(`pra-id-${clientId}`, nextCode('PR', products));
+  sv(`pra-save-${clientId}`, '');
+  inp(`pra-save-${clientId}`)?.setAttribute('onclick', `saveProd('${clientId}')`);
+  [`pra-name-${clientId}`, `pra-spec-${clientId}`, `pra-due-${clientId}`, `pra-note-${clientId}`].forEach(id => sv(id, ''));
+  sv(`pra-qty-${clientId}`, '1');
+  sv(`pra-unit-${clientId}`, '대');
+  sv(`pra-price-${clientId}`, '0');
+  const p = inp(panelId);
+  document.querySelectorAll('.add-panel.open').forEach(x => x.classList.remove('open'));
+  p?.classList.add('open');
+}
+
+function openProdEdit(clientId, productId) {
+  if (!checkAdminAction()) return;
+  const p = products.find(x => x.id === productId); if (!p) return;
+  editProductId = productId;
+  const ttl = inp(`pra-ttl-${clientId}`);
+  if (ttl) ttl.innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>품목 정보 상세 수정`;
+  sv(`pra-id-${clientId}`, p.id);
+  sv(`pra-name-${clientId}`, p.name);
+  sv(`pra-spec-${clientId}`, p.spec);
+  sv(`pra-due-${clientId}`, p.deliveryDate);
+  sv(`pra-qty-${clientId}`, p.qty);
+  sv(`pra-unit-${clientId}`, p.unit);
+  sv(`pra-price-${clientId}`, p.price);
+  sv(`pra-stage-${clientId}`, p.processStage);
+  sv(`pra-status-${clientId}`, p.status);
+  sv(`pra-note-${clientId}`, p.note || '');
+  inp(`pra-save-${clientId}`)?.setAttribute('onclick', `saveProdEdit('${clientId}','${productId}')`);
+  const panel = inp(`pra-${clientId}`);
+  document.querySelectorAll('.add-panel.open').forEach(x => x.classList.remove('open'));
+  panel?.classList.add('open');
+}
+
+function saveProd(clientId) {
+  if (!checkAdminAction()) return;
+  const name = v(`pra-name-${clientId}`).trim();
+  if (!name) { showToast('제품 품목명은 필수 입력 사항입니다.', 'error'); return; }
+  const id = nextCode('PR', products);
+  products.push({
+    id, clientId, name,
+    spec: v(`pra-spec-${clientId}`),
+    qty: parseInt(v(`pra-qty-${clientId}`)) || 1,
+    unit: v(`pra-unit-${clientId}`) || '대',
+    price: parseInt(v(`pra-price-${clientId}`)) || 0,
+    deliveryDate: v(`pra-due-${clientId}`),
+    status: v(`pra-status-${clientId}`),
+    processStage: v(`pra-stage-${clientId}`),
+    processMemo: '',
+    note: v(`pra-note-${clientId}`)
+  });
+  saveStorage('products', products);
+  closePanel(`pra-${clientId}`);
+  renderClients();
+  syncFilterDropdowns();
+  showToast('신규 제조 품목 모델이 등록되었습니다.');
+}
+
+function saveProdEdit(clientId, productId) {
+  if (!checkAdminAction()) return;
+  const p = products.find(x => x.id === productId); if (!p) return;
+  const name = v(`pra-name-${clientId}`).trim();
+  if (!name) { showToast('제품 명칭은 공백일 수 없습니다.', 'error'); return; }
+  p.name = name;
+  p.spec = v(`pra-spec-${clientId}`);
+  p.deliveryDate = v(`pra-due-${clientId}`);
+  p.qty = parseInt(v(`pra-qty-${clientId}`)) || 1;
+  p.unit = v(`pra-unit-${clientId}`) || '대';
+  p.price = parseInt(v(`pra-price-${clientId}`)) || 0;
+  p.processStage = v(`pra-stage-${clientId}`);
+  p.status = v('pra-status-' + clientId);
+  p.note = v(`pra-note-${clientId}`);
+  saveStorage('products', products);
+  closePanel(`pra-${clientId}`);
+  editProductId = null;
+  renderClients();
+  syncFilterDropdowns();
+  showToast('제품 사양 정보가 업데이트되었습니다.');
+}
+
+function deleteProduct(id) {
+  if (!checkAdminAction()) return;
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const mCount = materials.filter(m => m.productId === id).length;
+  confirm_('품목 정보 영구 삭제', `품목 <strong>[${p.name}]</strong>을 제거하시겠습니까?<br>연동 등록된 구성 자재 <strong>${mCount}종 및 생산지시</strong>가 함께 휴지통으로 이동합니다.`, () => {
+    const productMaterials = materials.filter(m => m.productId === id);
+    const productOrders = workOrders.filter(w => w.productId === id);
+
+    const cascade = {
+      materials: productMaterials,
+      workOrders: productOrders
+    };
+    pushToTrash('product', `${p.name} (완제품 및 조립 부품 ${mCount}종)`, id, p, cascade);
+
+    products = products.filter(x => x.id !== id);
+    materials = materials.filter(m => m.productId !== id);
+    workOrders = workOrders.filter(w => w.productId !== id);
+
+    saveStorage('products', products);
+    saveStorage('materials', materials);
+    saveStorage('workOrders', workOrders);
+
+    renderClients();
+    syncFilterDropdowns();
+    showToast('해당 완제품이 휴지통으로 이동했습니다.', 'info');
+  });
+}
+
+function exportClientsCSV() {
+  const h = ['업체코드','업체명','담당자','연락처','이메일','수주일','제품코드','제품명','사양','수량','단위','단가','합계금액','공정단계','마일스톤상태','특이사항'];
+  const rows = [];
+  clients.forEach(c => {
+    const prods = products.filter(p => p.clientId === c.id);
+    if (prods.length === 0) {
+      rows.push([c.id, c.name, c.manager, c.tel, c.email, c.date, '', '', '', '', '', '', '', '', '', c.note]);
+    } else {
+      prods.forEach(p => {
+        rows.push([
+          c.id, c.name, c.manager, c.tel, c.email, c.date,
+          p.id, p.name, p.spec, p.qty, p.unit, p.price, p.price * p.qty, p.processStage, p.status, p.note || c.note
+        ]);
+      });
+    }
+  });
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_수주관리_${today()}.csv`;
+  a.click();
+  showToast('수주처 및 상세 완제품 리스트가 엑셀로 출력되었습니다.');
+}
+
+function toggleClient(id) {
+  if (expandedClients.has(id)) expandedClients.delete(id);
+  else expandedClients.add(id);
+  renderClients();
+}
+
+function changeProdStage(id, val) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const p = products.find(x => x.id === id);
+      if (p) { p.processStage = val; saveStorage('products', products); refreshPage(currentPage); }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const p = products.find(x => x.id === id);
+  if (p) { p.processStage = val; saveStorage('products', products); }
+}
+
+function changeProdStatus(id, val) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const p = products.find(x => x.id === id);
+      if (p) { p.status = val; saveStorage('products', products); refreshPage(currentPage); }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const p = products.find(x => x.id === id);
+  if (p) { p.status = val; saveStorage('products', products); }
+}
+
+function navToMatForProduct(pid) {
+  const p = getProductById(pid); if (!p) return;
+  go('materials');
+  setTimeout(() => {
+    sv('mat-fc', p.clientId);
+    onMatClientChange();
+    sv('mat-fp', pid);
+    renderMaterials();
+  }, 100);
+}
+
+/* ════════ 3. 자재 수급 및 외주 관리 ════════ */
+function syncFilterDropdowns() {
+  fillClientSelect('mat-fc', true);
+  fillClientSelect('proc-fc', true);
+}
+function onMatClientChange() {
+  const cid = v('mat-fc');
+  const el = inp('mat-fp'); if (!el) return;
+  const list = cid ? products.filter(p => p.clientId === cid) : products;
+  el.innerHTML = '<option value="">전체 제품 목록</option>' + list.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  renderMaterials();
+}
+function onAddMatClientChange() { fillProductSelect('ma-product', v('ma-client')); }
+
+function openMatAdd() {
+  if (!checkAdminAction()) return;
+  editMatId = null;
+  inp('mat-add-ttl').innerHTML = '<i class="ti ti-package-import"></i>자재 수급/발주 신규 등록';
+  const saveBtn = inp('mat-save-btn');
+  if (saveBtn) { saveBtn.innerHTML = '<i class="ti ti-check"></i>등록'; saveBtn.setAttribute('onclick', 'saveMaterialForm()'); }
+  sv('ma-id', nextCode('MT', materials));
+  fillClientSelect('ma-client', false);
+  const selC = v('mat-fc');
+  const selP = v('mat-fp');
+  sv('ma-client', selC || clients[0]?.id || '');
+  fillProductSelect('ma-product', selC || clients[0]?.id || '', selP || '');
+  sv('ma-odate', today());
+  sv('ma-edate', '');
+  ['ma-name', 'ma-supplier', 'ma-price', 'ma-qty', 'ma-note'].forEach(id => sv(id, ''));
+  sv('ma-unit', 'EA');
+  sv('ma-status', '발주전');
+  togglePanel('mat-add-panel');
+}
+
+function openMatEdit(id) {
+  if (!checkAdminAction()) return;
+  const m = materials.find(x => x.id === id); if (!m) return;
+  editMatId = id;
+  inp('mat-add-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>자재 명세서 상세 수정`;
+  const saveBtn = inp('mat-save-btn');
+  if (saveBtn) { saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>저장'; saveBtn.setAttribute('onclick', 'saveMaterialForm()'); }
+  fillClientSelect('ma-client', false);
+  const pr = getProductById(m.productId);
+  sv('ma-id', m.id);
+  sv('ma-client', pr?.clientId || '');
+  fillProductSelect('ma-product', pr?.clientId || '', m.productId);
+  sv('ma-name', m.name);
+  sv('ma-supplier', m.supplier);
+  sv('ma-price', m.unitPrice);
+  sv('ma-qty', m.qty);
+  sv('ma-unit', m.unit);
+  sv('ma-odate', m.orderDate);
+  sv('ma-edate', m.expectedDate);
+  sv('ma-status', m.status);
+  sv('ma-note', m.note);
+  const p = inp('mat-add-panel'); p?.classList.add('open');
+  p?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function saveMaterialForm() {
+  if (!checkAdminAction()) return;
+  const name = v('ma-name').trim(), supplier = v('ma-supplier').trim(), productId = v('ma-product');
+  if (!name || !supplier || !productId) { showToast('품목명칭, 주 거래처, 연계 품목 지정을 완료해주세요.', 'error'); return; }
+  if (editMatId) {
+    const m = materials.find(x => x.id === editMatId); if (!m) return;
+    m.productId = productId; m.name = name; m.supplier = supplier;
+    m.unitPrice = parseInt(v('ma-price')) || 0; m.qty = parseInt(v('ma-qty')) || 0;
+    m.unit = v('ma-unit') || 'EA'; m.orderDate = v('ma-odate');
+    m.expectedDate = v('ma-edate'); m.status = m.status; m.note = v('ma-note');
+  } else {
+    materials.unshift({
+      id: nextCode('MT', materials),
+      productId, name, supplier,
+      unitPrice: parseInt(v('ma-price')) || 0,
+      qty: parseInt(v('ma-qty')) || 0,
+      unit: v('ma-unit') || 'EA',
+      orderDate: v('ma-odate'),
+      expectedDate: v('ma-edate'),
+      status: v('ma-status'),
+      note: v('ma-note')
+    });
+  }
+  saveStorage('materials', materials);
+  editMatId = null;
+  closePanel('mat-add-panel');
+  renderMaterials();
+  showToast('발주 자재 명세 기록이 저장되었습니다.');
+}
+
+function changeMatStatus(id, val) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const m = materials.find(x => x.id === id);
+      if (m) {
+        m.status = val;
+        saveStorage('materials', materials);
+        renderMatKpi();
+        if (val === '입고완료') {
+          showToast(`자재 [${m.name}] 입고완료 처리. 재고 대장을 체크해주세요.`, 'info');
+        }
+        refreshPage(currentPage);
+      }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const m = materials.find(x => x.id === id);
+  if (m) { 
+    m.status = val; 
+    saveStorage('materials', materials); 
+    renderMatKpi(); 
+    if (val === '입고완료') {
+      showToast(`자재 [${m.name}] 입고완료 처리. 재고 대장을 체크해주세요.`, 'info');
+    }
+  }
+}
+
+function renderMatKpi() {
+  const by = s => materials.filter(m => m.status === s).length;
+  const total = materials.reduce((s, m) => s + getMatAmt(m), 0);
+  const done = materials.filter(m => m.status === '입고완료').reduce((s, m) => s + getMatAmt(m), 0);
+  inp('mat-kpi').innerHTML = `
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-dashed"></i>발주 전 대기</div><div class="mc-val">${by('발주전')}건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-truck-delivery" style="color:var(--tx-i);"></i>외주 배송중</div><div class="mc-val" style="color:var(--tx-i);">${by('발주')}건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>창고 입고 완료</div><div class="mc-val" style="color:var(--tx-ok);">${by('입고완료')}건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-coin"></i>예산 소요 규모</div><div class="mc-val">${fmtW(total)}</div><div class="mc-sub">실납품 완료액 ${fmtW(done)}</div></div>`;
+}
+
+function renderMaterials() {
+  renderMatKpi();
+  const q = v('mat-q').toLowerCase(), fc = v('mat-fc'), fp = v('mat-fp'), fs = v('mat-fs');
+  const fil = materials.filter(m => {
+    if (q && ![m.name, m.supplier, m.id].join(' ').toLowerCase().includes(q)) return false;
+    if (fs && m.status !== fs) return false;
+    if (fp && m.productId !== fp) return false;
+    if (fc && !fp) {
+      const pr = getProductById(m.productId);
+      if (!pr || pr.clientId !== fc) return false;
+    }
+    return true;
+  });
+
+  const el = inp('mat-table'); if (!el) return;
+  if (!fil.length) { el.innerHTML = empty('조건에 부합하는 자재 내역서가 없습니다.'); return; }
+  const totalAmt = fil.reduce((s, m) => s + getMatAmt(m), 0);
+  const statusColors = { '발주전': 'color:var(--tx-t)', '발주': 'color:var(--tx-i)', '입고완료': 'color:var(--tx-ok)', '지연': 'color:var(--tx-d)' };
+
+  el.innerHTML = `
+    <table style="min-width: 1080px;">
+      <thead>
+        <tr>
+          <th>자재코드</th><th>구분고객사</th><th>매칭제품</th><th>자재품명</th><th>협력공급처</th>
+          <th>구매단가</th><th>수량</th><th>매입총액</th><th>주문일자</th><th>입고예정일</th><th>진행상황</th><th>참고사항</th><th>관리작업</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${fil.map(m => {
+          const pr = getProductById(m.productId);
+          return `
+            <tr>
+              <td>${m.id}</td>
+              <td>${getClientName(pr?.clientId)}</td>
+              <td style="font-weight:600; font-size:11px;">${pr?.name || ''}</td>
+              <td style="font-weight:700;">${m.name}</td>
+              <td>${m.supplier}</td>
+              <td style="font-weight:600;">₩${fmt(m.unitPrice)}</td>
+              <td>${m.qty} ${m.unit}</td>
+              <td style="font-weight:700; color:var(--tx-i);">₩${fmt(getMatAmt(m))}</td>
+              <td>${m.orderDate || '—'}</td>
+              <td>${m.expectedDate ? m.expectedDate + ' ' + dayBadge(m.expectedDate) : '—'}</td>
+              <td>
+                <select class="stat-sel" style="${statusColors[m.status] || ''}" onchange="changeMatStatus('${m.id}',this.value)">
+                  ${['발주전', '발주', '입고완료', '지연'].map(s => `<option${s === m.status ? ' selected' : ''}>${s}</option>`).join('')}
+                </select>
+              </td>
+              <td style="font-size:11px; color:var(--tx-t); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${m.note || ''}">${m.note || '—'}</td>
+              <td>
+                <button class="edit-btn" onclick="openMatEdit('${m.id}')"><i class="ti ti-edit"></i>수정</button>
+                <button class="del-btn" style="margin-left:4px;" onclick="deleteMat('${m.id}')"><i class="ti ti-trash"></i></button>
+              </td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--bg-s);">
+          <td colspan="7" style="font-size:11px; font-weight:700;">조건부 합계 건수 : ${fil.length}건</td>
+          <td style="font-weight:700; color:var(--tx-i);">₩${fmt(totalAmt)}</td>
+          <td colspan="5"></td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+function deleteMat(id) {
+  if (!checkAdminAction()) return;
+  const m = materials.find(x => x.id === id);
+  if (!m) return;
+  confirm_('자재 공급 정보 영구 삭제', `정말 명세서 상의 <strong>[${m.name}]</strong> 원부자재 가공 발주건을 폐기하시겠습니까?`, () => {
+    pushToTrash('material', `${m.name} (발주자재)`, id, m);
+
+    materials = materials.filter(x => x.id !== id);
+    saveStorage('materials', materials);
+    renderMaterials();
+    showToast('자재 발주 기록이 휴지통으로 이동했습니다.', 'info');
+  });
+}
+
+function exportMatCSV() {
+  const h = ['자재코드','고객사명','연계품명','원부자재명','공급 협력사','단가(원)','조달수량','규격단위','총소요액','지출일자','입고일자','상태','비고'];
+  const rows = materials.map(m => {
+    const pr = getProductById(m.productId);
+    return [m.id, getClientName(pr?.clientId), pr?.name || '', m.name, m.supplier, m.unitPrice, m.qty, m.unit, getMatAmt(m), m.orderDate, m.expectedDate, m.status, m.note];
+  });
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_자재지출관리_${today()}.csv`;
+  a.click();
+  showToast('자재 수급/발주 리스트가 엑셀로 출력되었습니다.');
+}
+
+/* ════════ 3.5 실시간 현장 재고 관리 ════════ */
+function renderInvKpi() {
+  const totalCount = inventory.length;
+  const lowStock = inventory.filter(i => i.qty <= i.minQty);
+  const matValue = inventory.filter(i => i.type === '자재').length;
+  const finishedProductsCount = inventory.filter(i => i.type === '완제품').reduce((acc, curr) => acc + curr.qty, 0);
+
+  inp('inv-kpi').innerHTML = `
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-box"></i>관리 품목수</div><div class="mc-val">${totalCount}개 종</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">${lowStock.length}개 품목</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-tools" style="color:var(--tx-i);"></i>자재 원재료 품목</div><div class="mc-val" style="color:var(--tx-i);">${matValue}종</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-building-factory" style="color:var(--tx-ok);"></i>완제품 보유 재고</div><div class="mc-val" style="color:var(--tx-ok);">${finishedProductsCount}개</div></div>`;
+}
+
+function renderInventory() {
+  renderInvKpi();
+  const filterType = v('inv-filter-type');
+  const filterStatus = v('inv-filter-status');
+  const searchQ = v('inv-q').toLowerCase();
+
+  const filtered = inventory.filter(i => {
+    if (filterType && i.type !== filterType) return false;
+    if (filterStatus === 'low' && i.qty > i.minQty) return false;
+    if (filterStatus === 'normal' && i.qty <= i.minQty) return false;
+    if (searchQ && ![i.name, i.location, i.id].join(' ').toLowerCase().includes(searchQ)) return false;
+    return true;
+  });
+
+  const tableContainer = inp('inventory-table');
+  if (!tableContainer) return;
+  if (!filtered.length) { tableContainer.innerHTML = empty('검색 조건에 맞는 재고 대장이 비어있습니다.'); return; }
+
+  tableContainer.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>재고 코드</th>
+          <th>분류</th>
+          <th>품목명</th>
+          <th>현재고</th>
+          <th>안전재고량</th>
+          <th>단위</th>
+          <th>보관 위치</th>
+          <th>재고 상태</th>
+          <th>빠른 수량 조정</th>
+          <th>비고 및 특이사항</th>
+          <th>동작</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtered.map(i => {
+          const isLow = i.qty <= i.minQty;
+          return `
+            <tr>
+              <td>${i.id}</td>
+              <td><span class="bd ${i.type === '완제품' ? 'bd-ok' : i.type === '반제품' ? 'bd-info' : 'bd-neu'}">${i.type}</span></td>
+              <td style="font-weight:700;">${i.name}</td>
+              <td style="font-size:14px; font-weight:700; color:${isLow ? 'var(--tx-d)' : 'var(--tx-i)'};">${i.qty}</td>
+              <td style="font-weight:600; color:var(--tx-s);">${i.minQty}</td>
+              <td><span class="bd bd-neu">${i.unit}</span></td>
+              <td>${i.location || '—'}</td>
+              <td>
+                ${isLow ? '<span class="bd bd-err"><i class="ti ti-alert-triangle"></i> 안전재고 미달!</span>' : '<span class="bd bd-ok">정상 보유</span>'}
+              </td>
+              <td>
+                <div style="display:flex; gap:4px;">
+                  <button class="btn btn-sm" onclick="adjustStock('${i.id}', 1)"><i class="ti ti-plus"></i></button>
+                  <button class="btn btn-sm btn-danger" onclick="adjustStock('${i.id}', -1)"><i class="ti ti-minus"></i></button>
+                </div>
+              </td>
+              <td style="font-size:11px; color:var(--tx-t); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${i.note || ''}">${i.note || '—'}</td>
+              <td>
+                <button class="edit-btn" onclick="openInvEdit('${i.id}')"><i class="ti ti-edit"></i>수정</button>
+                <button class="del-btn" onclick="deleteInventory('${i.id}')"><i class="ti ti-trash"></i></button>
+              </td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function adjustStock(id, amount) {
+  if (!checkAdminAction()) return;
+  const i = inventory.find(x => x.id === id);
+  if (i) {
+    i.qty = Math.max(0, i.qty + amount);
+    saveStorage('inventory', inventory);
+    renderInventory();
+    if (i.qty <= i.minQty) {
+      showToast(`[경고] ${i.name} 안전재고량 미달 발생!`, 'error');
+    } else {
+      showToast(`${i.name} 재고가 ${amount > 0 ? '증가' : '감소'}되었습니다.`);
+    }
+  }
+}
+
+function openInvAdd() {
+  if (!checkAdminAction()) return;
+  editInvId = null;
+  inp('inv-add-ttl').innerHTML = '<i class="ti ti-package"></i>신규 재고 품목 가입 대장';
+  const saveBtn = inp('inv-save-btn');
+  if (saveBtn) { saveBtn.innerHTML = '<i class="ti ti-check"></i>저장'; }
+  sv('inva-id', nextCode('INV', inventory));
+  sv('inva-name', '');
+  sv('inva-type', '자재');
+  sv('inva-unit', 'EA');
+  sv('inva-qty', '0');
+  sv('inva-minQty', '10');
+  sv('inva-location', '');
+  sv('inva-note', '');
+  togglePanel('inv-add-panel');
+}
+
+function openInvEdit(id) {
+  if (!checkAdminAction()) return;
+  const i = inventory.find(x => x.id === id); if (!i) return;
+  editInvId = id;
+  inp('inv-add-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>재고 상세 규격 수정`;
+  const saveBtn = inp('inv-save-btn');
+  if (saveBtn) { saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>수정완료'; }
+  sv('inva-id', i.id);
+  sv('inva-name', i.name);
+  sv('inva-type', i.type);
+  sv('inva-unit', i.unit);
+  sv('inva-qty', i.qty);
+  sv('inva-minQty', i.minQty);
+  sv('inva-location', i.location || '');
+  sv('inva-note', i.note || '');
+  const p = inp('inv-add-panel'); p?.classList.add('open');
+}
+
+function saveInventoryForm() {
+  if (!checkAdminAction()) return;
+  const name = v('inva-name').trim();
+  const qty = parseInt(v('inva-qty'));
+  const minQty = parseInt(v('inva-minQty'));
+  if (!name || isNaN(qty) || isNaN(minQty)) { showToast('품목 명칭 및 수량 필수 기재가 필요합니다.', 'error'); return; }
+
+  if (editInvId) {
+    const i = inventory.find(x => x.id === editInvId); if (!i) return;
+    i.name = name;
+    i.type = v('inva-type');
+    i.unit = v('inva-unit');
+    i.qty = qty;
+    i.minQty = minQty;
+    i.location = v('inva-location');
+    i.note = v('inva-note');
+  } else {
+    inventory.unshift({
+      id: nextCode('INV', inventory),
+      name,
+      type: v('inva-type'),
+      unit: v('inva-unit'),
+      qty,
+      minQty,
+      location: v('inva-location'),
+      note: v('inva-note')
+    });
+  }
+  saveStorage('inventory', inventory);
+  editInvId = null;
+  closePanel('inv-add-panel');
+  renderInventory();
+  showToast('재고 정보가 성공적으로 반영되었습니다.');
+}
+
+function deleteInventory(id) {
+  if (!checkAdminAction()) return;
+  const i = inventory.find(x => x.id === id);
+  if (!i) return;
+  confirm_('재고 대장 영구 삭제', '해당 재고 보관 정보를 완전 제거하시겠습니까?', () => {
+    pushToTrash('inventory', `${i.name} (재고품목)`, id, i);
+
+    inventory = inventory.filter(x => x.id !== id);
+    saveStorage('inventory', inventory);
+    renderInventory();
+    showToast('재고 보관 정보가 휴지통으로 이동했습니다.', 'info');
+  });
+}
+
+function exportInvCSV() {
+  const h = ['재고코드','분류','품목명','현재고','안전재고량','단위','보관위치','상태','특이사항'];
+  const rows = inventory.map(i => [
+    i.id, i.type, i.name, i.qty, i.minQty, i.unit, i.location,
+    (i.qty <= i.minQty ? '안전재고 미달' : '정상 보유'), i.note
+  ]);
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_실시간재고_${today()}.csv`;
+  a.click();
+  showToast('실시간 창고 현장 재고 자재 현황이 엑셀로 출력되었습니다.');
+}
+
+/* ════════ 4. 현장 생산 지시 관리 ════════ */
+function renderOrders() {
+  const q = v('orders-q').toLowerCase(), fs = v('orders-fs');
+  const fil = workOrders.filter(o => {
+    if (q && ![o.id, getClientName(o.clientId), getProductName(o.productId), o.manager].join(' ').toLowerCase().includes(q)) return false;
+    if (fs && o.status !== fs) return false;
+    return true;
+  });
+
+  const cnt = { '완료': 0, '진행중': 0, '지연': 0, '대기': 0 };
+  workOrders.forEach(o => cnt[o.status] = (cnt[o.status] || 0) + 1);
+  inp('orders-summary').innerHTML = ['완료', '진행중', '지연', '대기'].map(s => {
+    const icons = { '완료': 'ti-circle-check', '진행중': 'ti-loader', '지연': 'ti-alert-triangle', '대기': 'ti-clock' };
+    const cols = { '완료': '#37b24d', '진행중': '#185FA5', '지연': '#e03131', '대기': '#868e96' };
+    return `
+      <div class="sum-box">
+        <i class="ti ${icons[s]} si" style="color:${cols[s]};"></i>
+        <div>
+          <div class="sn">${cnt[s]}건</div>
+          <div class="sl">${s} 현황</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const el = inp('orders-table'); if (!el) return;
+  if (!fil.length) { el.innerHTML = empty('발행 완료된 생산 지시서 내역이 없습니다.'); return; }
+
+  el.innerHTML = `
+    <table style="min-width:960px;">
+      <thead>
+        <tr>
+          <th>지시번호</th><th>고객사</th><th>조업 대상 완제품</th><th>배정 설비 라인</th><th>작업 수량</th><th>완료량 실적</th><th>생산 불량</th><th>개시일</th><th>출하 마감일</th><th>공정 실적율</th><th>진행 상황</th><th>라인 총괄</th><th>조작</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${fil.map(o => `
+          <tr>
+            <td style="font-weight:700;">${o.id}</td>
+            <td>${getClientName(o.clientId)}</td>
+            <td style="font-weight:600; color:var(--tx-i);">${getProductName(o.productId)}</td>
+            <td style="font-weight:600;">${o.line}</td>
+            <td style="font-weight:700;">${o.qty}</td>
+            <td><input type="number" value="${o.done}" min="0" max="${o.qty}" style="width:65px; height:24px; font-weight:700;" onchange="qDone('${o.id}',this.value)"></td>
+            <td><input type="number" value="${o.defect}" min="0" style="width:55px; height:24px; color:var(--tx-d); font-weight:700;" onchange="qDefect('${o.id}',this.value)"></td>
+            <td>${o.start}</td>
+            <td>${dayBadge(o.due)} <span style="font-size:11px; color:var(--tx-t);">${o.due}</span></td>
+            <td>${pctBar(o.done, o.qty, 70)}</td>
+            <td>
+              <select class="stat-sel" onchange="qStatus('${o.id}',this.value)">
+                ${['대기', '진행중', '완료', '지연'].map(s => `<option${s === o.status ? ' selected' : ''}>${s}</option>`).join('')}
+              </select>
+            </td>
+            <td>${o.manager}</td>
+            <td>
+              <button class="edit-btn" onclick="openOrderEdit('${o.id}')"><i class="ti ti-edit"></i></button>
+              <button class="del-btn" onclick="deleteOrder('${o.id}')"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function openOrderAdd() {
+  if (!checkAdminAction()) return;
+  editOrderId = null;
+  inp('o-panel-ttl').innerHTML = '<i class="ti ti-clipboard-plus"></i>현장 생산 지시서 신규 발행';
+  const saveBtn = inp('o-save-btn');
+  if (saveBtn) { saveBtn.innerHTML = '<i class="ti ti-check"></i>발행 완료'; saveBtn.setAttribute('onclick', 'saveOrderForm()'); }
+  sv('oa-id', nextCode('WO', workOrders));
+  fillClientSelect('oa-client', false);
+  sv('oa-client', clients[0]?.id || '');
+  fillProductSelect('oa-product', clients[0]?.id || '');
+  sv('oa-start', today());
+  sv('oa-due', '');
+  ['oa-qty', 'oa-done', 'oa-mgr', 'oa-note'].forEach(id => sv(id, ''));
+  sv('oa-status', '대기');
+  togglePanel('o-panel');
+}
+
+function openOrderEdit(id) {
+  if (!checkAdminAction()) return;
+  const o = workOrders.find(x => x.id === id); if (!o) return;
+  editOrderId = id;
+  inp('o-panel-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>생산 지시서 내용 수정 — ${o.id}`;
+  const saveBtn = inp('o-save-btn');
+  if (saveBtn) { saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>저장'; saveBtn.setAttribute('onclick', 'saveOrderForm()'); }
+  sv('oa-id', o.id);
+  fillClientSelect('oa-client', false);
+  sv('oa-client', o.clientId);
+  fillProductSelect('oa-product', o.clientId, o.productId);
+  sv('oa-line', o.line);
+  sv('oa-qty', o.qty);
+  sv('oa-done', o.done);
+  sv('oa-start', o.start);
+  sv('oa-due', o.due);
+  sv('oa-status', o.status);
+  sv('oa-mgr', o.manager);
+  sv('oa-note', o.note || '');
+  const p = inp('o-panel'); p?.classList.add('open');
+  p?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function onAddOrderClientChange() { fillProductSelect('oa-product', v('oa-client')); }
+
+function saveOrderForm() {
+  if (!checkAdminAction()) return;
+  const productId = v('oa-product'); if (!productId) { showToast('제조 가동할 품목 모델을 선택해주십시오.', 'error'); return; }
+  const qty = parseInt(v('oa-qty')) || 0;
+  if (qty <= 0) { showToast('목표 지시 수량은 최소 1개 이상이어야 합니다.', 'error'); return; }
+  if (editOrderId) {
+    const o = workOrders.find(x => x.id === editOrderId); if (!o) return;
+    o.clientId = v('oa-client'); o.productId = productId; o.line = v('oa-line');
+    o.qty = qty; o.done = parseInt(v('oa-done')) || 0;
+    o.start = v('oa-start'); o.due = v('oa-due'); o.status = v('oa-status');
+    o.manager = v('oa-mgr'); o.note = v('oa-note');
+  } else {
+    workOrders.unshift({
+      id: nextCode('WO', workOrders),
+      clientId: v('oa-client'), productId, line: v('oa-line'),
+      qty: qty, done: 0, defect: 0,
+      start: v('oa-start'), due: v('oa-due'), status: v('oa-status'),
+      manager: v('oa-mgr'), note: v('oa-note')
+    });
+  }
+  saveStorage('workOrders', workOrders);
+  editOrderId = null;
+  closePanel('o-panel');
+  renderOrders();
+}
+
+function qDone(id, val) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const o = workOrders.find(x => x.id === id);
+      if (o) {
+        o.done = Math.max(0, Math.min(o.qty, parseInt(val) || 0));
+        if (o.done >= o.qty) o.status = '완료';
+        saveStorage('workOrders', workOrders);
+        renderOrders();
+      }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const o = workOrders.find(x => x.id === id); if (!o) return;
+  o.done = Math.max(0, Math.min(o.qty, parseInt(val) || 0));
+  if (o.done >= o.qty) o.status = '완료';
+  saveStorage('workOrders', workOrders);
+  renderOrders();
+}
+
+function qDefect(id, val) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const o = workOrders.find(x => x.id === id);
+      if (o) {
+        o.defect = Math.max(0, parseInt(val) || 0);
+        saveStorage('workOrders', workOrders);
+        renderOrders();
+      }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const o = workOrders.find(x => x.id === id);
+  if (o) { o.defect = Math.max(0, parseInt(val) || 0); saveStorage('workOrders', workOrders); }
+}
+
+function qStatus(id, val) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const o = workOrders.find(x => x.id === id);
+      if (o) {
+        o.status = val;
+        saveStorage('workOrders', workOrders);
+        renderOrders();
+      }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const o = workOrders.find(x => x.id === id);
+  if (o) { o.status = val; saveStorage('workOrders', workOrders); }
+}
+
+function deleteOrder(id) {
+  if (!checkAdminAction()) return;
+  const o = workOrders.find(x => x.id === id);
+  if (!o) return;
+  confirm_('생산 지시서 폐기 확인', `정말로 지시 번호 <strong>[${id}]</strong> 생산 계획 지시를 삭제 및 파기 처리하시겠습니까?`, () => {
+    pushToTrash('order', `지시번호 ${o.id} - ${getProductName(o.productId)}`, id, o);
+
+    workOrders = workOrders.filter(x => x.id !== id);
+    saveStorage('workOrders', workOrders);
+    renderOrders();
+    showToast('작업 지시서가 휴지통으로 이동했습니다.', 'info');
+  });
+}
+
+function exportOrdersCSV() {
+  const h = ['지시번호','고객사명','생산제품','배정라인','목표계획량','실적달성량','불량검출량','작업개시일','납기마감일','달성률','상태','감독담당자','메모'];
+  const rows = workOrders.map(o => [
+    o.id, getClientName(o.clientId), getProductName(o.productId), o.line, o.qty, o.done, o.defect,
+    o.start, o.due, (o.qty > 0 ? (o.done / o.qty * 100).toFixed(1) + '%' : '0%'), o.status, o.manager, o.note || ''
+  ]);
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_생산지시서_${today()}.csv`;
+  a.click();
+  showToast('현장 작업 오더 및 실시간 지시 목록이 엑셀로 출력되었습니다.');
+}
+
+/* ════════ 5. 실시간 공정 마일스톤 관리 (칸반) ════════ */
+function renderProcess() {
+  const total = products.filter(p => p.status !== '견적').length;
+  const inProg = products.filter(p => p.status === '생산중').length;
+  const matPending = materials.filter(m => m.status === '발주전').length;
+  const nearDue = products.filter(p => p.deliveryDate && daysUntil(p.deliveryDate) <= 30 && p.status !== '견적').length;
+
+  inp('proc-kpi').innerHTML = `
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-box"></i>가동중 완제품</div><div class="mc-val">${total}건</div><div class="mc-sub">견적 사양 제외</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>생산 실가동 제품</div><div class="mc-val" style="color:var(--tx-i);">${inProg}종</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-calendar-due" style="color:var(--tx-w);"></i>30일 이내 납품 임박</div><div class="mc-val" style="color:var(--tx-w);">${nearDue}종</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-d);"></i>자재 미해결 (대기)</div><div class="mc-val" style="color:var(--tx-d);">${matPending}건</div></div>`;
+
+  fillClientSelect('proc-fc', true);
+  inp('stage-input').value = processStages.join(', ');
+  renderKanban();
+  renderProcDetail();
+}
+
+function renderKanban() {
+  const fc = v('proc-fc');
+  const activeProd = products.filter(p => p.status !== '견적' && (!fc || p.clientId === fc));
+
+  inp('kanban-board').innerHTML = processStages.map(stage => {
+    const stageProds = activeProd.filter(p => p.processStage === stage);
+    const stageColors = {
+      '설계/도면': '#6741d9', '자재발주': '#1c7ed6', '가공/제작': '#e8590c',
+      '조립': '#2b8a3e', '배선/전기': '#0b7285', '검사/시험': '#c92a2a', '출하완료': '#495057'
+    };
+    const c = stageColors[stage] || '#495057';
+    return `
+      <div class="kb-col">
+        <div class="kb-col-hd" style="background:${c}12; color:${c};">
+          <span>${stage}</span>
+          <span style="background:${c}; color:#ffffff; border-radius:10px; padding:1px 6px; font-size:10px; font-weight:700;">${stageProds.length}</span>
+        </div>
+        <div class="kb-cards-container">
+          ${stageProds.length ? stageProds.map(p => {
+            const d = daysUntil(p.deliveryDate);
+            const dc = d < 0 ? '#e03131' : d <= 14 ? '#e8590c' : '#2b8a3e';
+            return `
+              <div class="kb-card" onclick="openKanbanEditModal('${p.id}')">
+                <div class="kb-card-name">${p.name}</div>
+                <div class="kb-card-client">${getClientName(p.clientId)}</div>
+                ${p.deliveryDate ? `<div class="kb-card-due" style="color:${dc};"><i class="ti ti-calendar"></i>D-${d} (${p.deliveryDate.slice(5)})</div>` : ''}
+                ${p.processMemo ? `<div style="font-size:10.5px; color:var(--tx-t); margin-top:6px; border-top:1px solid var(--br); padding-top:6px;">${p.processMemo}</div>` : ''}
+              </div>`;
+          }).join('') : `<div class="kb-empty">해당 공정 비어있음</div>`}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openKanbanEditModal(productId) {
+  if (!checkAdminAction()) return;
+  const p = getProductById(productId); if (!p) return;
+  currentSelectedKanbanProductId = productId;
+  inp('km-prod-name').value = p.name;
+  
+  const stageSel = inp('km-stage');
+  stageSel.innerHTML = processStages.map(s => `<option value="${s}"${s === p.processStage ? ' selected' : ''}>${s}</option>`).join('');
+  
+  sv('km-status', p.status);
+  inp('km-memo').value = p.processMemo || '';
+  
+  inp('kmSaveBtn').onclick = saveKanbanChanges;
+  inp('kanbanEditModal').classList.add('open');
+}
+
+function closeKanbanModal() {
+  inp('kanbanEditModal').classList.remove('open');
+  currentSelectedKanbanProductId = null;
+}
+
+function saveKanbanChanges() {
+  if (!currentSelectedKanbanProductId) return;
+  const p = getProductById(currentSelectedKanbanProductId);
+  if (p) {
+    p.processStage = v('km-stage');
+    p.status = v('km-status');
+    p.processMemo = inp('km-memo').value.trim();
+    saveStorage('products', products);
+    renderKanban();
+    renderProcDetail();
+    showToast(`${p.name}의 공정 상태가 갱신되었습니다.`);
+  }
+  closeKanbanModal();
+}
+
+function renderProcDetail() {
+  const fc = v('proc-fc');
+  const activeProd = products.filter(p => p.status !== '견적' && (!fc || p.clientId === fc));
+  inp('proc-detail-table').innerHTML = activeProd.length ? `
+    <table>
+      <thead>
+        <tr><th>고객 협력사</th><th>생산 모델명</th><th>납기완료 타겟</th><th>D-Day</th><th>현재 공정 마일스톤</th><th>공정 상태</th><th>공정 지시자 메모</th><th>원클릭 세부수정</th></tr>
+      </thead>
+      <tbody>
+        ${activeProd.map(p => `
+          <tr>
+            <td>${getClientName(p.clientId)}</td>
+            <td style="font-weight:700;">${p.name}</td>
+            <td>${p.deliveryDate || '—'}</td>
+            <td>${p.deliveryDate ? dayBadge(p.deliveryDate) : '—'}</td>
+            <td>
+              <select class="stat-sel" onchange="changeProdStage('${p.id}',this.value)">
+                ${processStages.map(s => `<option${s===p.processStage?' selected':''}>${s}</option>`).join('')}
+              </select>
+            </td>
+            <td>${statusBadge(p.status)}</td>
+            <td style="font-size:11px; color:var(--tx-t); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.processMemo || '—'}</td>
+            <td><button class="edit-btn btn-sm" onclick="openKanbanEditModal('${p.id}')"><i class="ti ti-edit"></i>메모/단계</button></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>` : empty('공정 추적 대상 완제품이 존재하지 않습니다.');
+}
+
+function openProcStagePanel() {
+  if (!checkAdminAction()) return;
+  inp('stage-input').value = processStages.join(', ');
+  togglePanel('proc-stage-panel');
+}
+
+function saveStages() {
+  if (!checkAdminAction()) return;
+  const raw = v('stage-input');
+  const arr = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!arr.length) { showToast('최소 1개 이상의 공정 체인이 필요합니다.', 'error'); return; }
+  processStages = arr;
+  saveStorage('stages', processStages);
+  closePanel('proc-stage-panel');
+  renderKanban();
+  renderProcDetail();
+  showToast('현장 맞춤형 공정 노선 설계가 완료되었습니다.');
+}
+
+function exportProcessCSV() {
+  const h = ['고객협력사','생산모델명','납기완료타겟','D-Day','현재 공정 마일스톤','공정상태','지시자메모'];
+  const fc = v('proc-fc');
+  const activeProd = products.filter(p => p.status !== '견적' && (!fc || p.clientId === fc));
+  const rows = activeProd.map(p => [
+    getClientName(p.clientId), p.name, p.deliveryDate || '—',
+    (p.deliveryDate ? `D-${daysUntil(p.deliveryDate)}` : '—'), p.processStage, p.status, p.processMemo || ''
+  ]);
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_실시간공정현황_${today()}.csv`;
+  a.click();
+  showToast('실시간 공정 마일스톤 현황 정보가 엑셀로 출력되었습니다.');
+}
+
+/* ════════ 6. 품질 및 검사 관리 ════════ */
+function renderQuality() {
+  const totDefect = defects.reduce((s, d) => s + d.qty, 0);
+  const openDefect = defects.filter(d => d.status !== '완료').length;
+  const claimOpen = claims.filter(c => c.status !== '완료').length;
+
+  inp('qc-kpi').innerHTML = `
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 유실수</div><div class="mc-val">${totDefect}개</div><div class="mc-sub">${defects.length}회 검출</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>개선/조치중 품질장애</div><div class="mc-val" style="color:var(--tx-i);">${openDefect}건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>해외/고객사 제기 클레임</div><div class="mc-val">${claims.length}건</div><div class="mc-sub">처리중 ${claimOpen}건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품전수검사</div><div class="mc-val" style="color:var(--tx-ok);">${checkRecords.filter(c=>c.result==='합격').length}/${checkRecords.length}건</div><div class="mc-sub">통과/검사기록</div></div>`;
+
+  fillClientSelect('df-client', false);
+  fillStageSelect('df-stage');
+  fillClientSelect('cl-client', false);
+  fillClientSelect('ck-client', false);
+
+  inp('defect-table').innerHTML = defects.length ? `
+    <table>
+      <thead>
+        <tr><th>코드</th><th>일자</th><th>제품</th><th>발생공정</th><th>하자유형</th><th>수량</th><th>상태</th><th>비고</th><th>관리 작업</th></tr>
+      </thead>
+      <tbody>
+        ${defects.map(d => `
+          <tr>
+            <td>${d.id}</td>
+            <td>${d.date}</td>
+            <td style="font-weight:600;">${getProductName(d.productId)}</td>
+            <td>${d.stage}</td>
+            <td style="font-weight:700; color:var(--tx-d);">${d.type}</td>
+            <td style="font-weight:700;">${d.qty}</td>
+            <td>
+              <select class="stat-sel" onchange="changeDefectStatus('${d.id}', this.value)">
+                <option${d.status==='조치중'?' selected':''}>조치중</option>
+                <option${d.status==='완료'?' selected':''}>완료</option>
+                <option${d.status==='보류'?' selected':''}>보류</option>
+              </select>
+            </td>
+            <td><span style="font-size:11px; color:var(--tx-t);">${d.note || '—'}</span></td>
+            <td>
+              <button class="edit-btn" onclick="openDefectEdit('${d.id}')"><i class="ti ti-edit"></i></button>
+              <button class="del-btn" onclick="deleteDefect('${d.id}')"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>` : empty('현재 공정 불량 이력이 보고되지 않았습니다.');
+
+  inp('claim-table').innerHTML = claims.length ? `
+    <table>
+      <thead>
+        <tr><th>인입일</th><th>의뢰 고객사</th><th>해당 제품</th><th>피드백 본문</th><th>조치 방안</th><th>상태</th><th>관리 작업</th></tr>
+      </thead>
+      <tbody>
+        ${claims.map(c => `
+          <tr>
+            <td>${c.date}</td>
+            <td style="font-weight:600;">${getClientName(c.clientId)}</td>
+            <td>${getProductName(c.productId)}</td>
+            <td style="font-weight:600; color:var(--tx-d);">${c.content}</td>
+            <td style="font-size:11px;">${c.response || '—'}</td>
+            <td>
+              <select class="stat-sel" onchange="changeClaimStatus('${c.id}', this.value)">
+                <option${c.status==='접수'?' selected':''}>접수</option>
+                <option${c.status==='처리중'?' selected':''}>처리중</option>
+                <option${c.status==='완료'?' selected':''}>완료</option>
+              </select>
+            </td>
+            <td>
+              <button class="edit-btn" onclick="openClaimEdit('${c.id}')"><i class="ti ti-edit"></i></button>
+              <button class="del-btn" onclick="deleteClaim('${c.id}')"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>` : empty('수집된 사후 클레임 분석 기록이 없습니다.');
+
+  inp('check-table').innerHTML = checkRecords.length ? `
+    <table>
+      <thead>
+        <tr><th>검사일</th><th>의뢰처</th><th>완료제품</th><th>검사원</th><th>외관</th><th>치수</th><th>테스트</th><th>종합판정</th><th>관리 작업</th></tr>
+      </thead>
+      <tbody>
+        ${checkRecords.map(r => `
+          <tr>
+            <td>${r.date}</td>
+            <td style="font-weight:600;">${getClientName(r.clientId)}</td>
+            <td>${getProductName(r.productId)}</td>
+            <td>${r.inspector}</td>
+            <td>${statusBadge(r.visual)}</td>
+            <td>${statusBadge(r.dim)}</td>
+            <td>${statusBadge(r.func)}</td>
+            <td style="font-weight:700;">${statusBadge(r.result)}</td>
+            <td>
+              <button class="edit-btn" onclick="openCheckEdit('${r.id}')"><i class="ti ti-edit"></i></button>
+              <button class="del-btn" onclick="deleteCheck('${r.id}')"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>` : empty('출하 검사 성적 체크리스트 데이터가 비어있습니다.');
+}
+
+function openDefectAdd() {
+  if (!checkAdminAction()) return;
+  editDefectId = null;
+  inp('df-add-ttl').innerHTML = '<i class="ti ti-plus"></i>제조 과정 불량 상세 리포트';
+  inp('df-save-btn').innerHTML = '<i class="ti ti-check"></i>저장 완료';
+  sv('df-id', nextCode('DF', defects));
+  sv('df-date', today());
+  sv('df-client', clients[0]?.id || '');
+  fillProductSelect('df-product', clients[0]?.id || '');
+  sv('df-stage', processStages[0]);
+  sv('df-type', '');
+  sv('df-qty', '1');
+  sv('df-cause', '');
+  sv('df-action', '');
+  sv('df-status', '조치중');
+  sv('df-note', '');
+  togglePanel('defect-add-panel');
+}
+
+function openDefectEdit(id) {
+  if (!checkAdminAction()) return;
+  const d = defects.find(x => x.id === id); if (!d) return;
+  editDefectId = id;
+  inp('df-add-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>불량 검출 분석서 수정 (${d.id})`;
+  inp('df-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
+  
+  const pr = getProductById(d.productId);
+  sv('df-id', d.id);
+  sv('df-date', d.date);
+  sv('df-client', pr?.clientId || clients[0]?.id);
+  fillProductSelect('df-product', pr?.clientId || clients[0]?.id, d.productId);
+  sv('df-stage', d.stage);
+  sv('df-type', d.type);
+  sv('df-qty', d.qty);
+  sv('df-cause', d.cause || '');
+  sv('df-action', d.action || '');
+  sv('df-status', d.status);
+  sv('df-note', d.note || '');
+  
+  const panel = inp('defect-add-panel');
+  panel?.classList.add('open');
+  panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function addDefect() {
+  if (!checkAdminAction()) return;
+  const type = v('df-type').trim();
+  const qty = parseInt(v('df-qty'));
+  if (!type || isNaN(qty) || qty <= 0) { showToast('불량 원인 유형 및 정확한 불량 수량을 명시해주세요.', 'error'); return; }
+  
+  if (editDefectId) {
+    const d = defects.find(x => x.id === editDefectId); if (!d) return;
+    d.productId = v('df-product');
+    d.date = v('df-date');
+    d.stage = v('df-stage');
+    d.type = type;
+    d.qty = qty;
+    d.cause = v('df-cause');
+    d.action = v('df-action');
+    d.status = v('df-status');
+    d.note = v('df-note');
+  } else {
+    defects.unshift({
+      id: nextCode('DF', defects),
+      productId: v('df-product'),
+      date: v('df-date'),
+      stage: v('df-stage'),
+      type,
+      qty,
+      cause: v('df-cause'),
+      action: v('df-action'),
+      status: v('df-status'),
+      note: v('df-note')
+    });
+  }
+  saveStorage('defects', defects);
+  editDefectId = null;
+  closePanel('defect-add-panel');
+  renderQuality();
+  showToast('불량 및 부적합 조치 내역이 보존 처리되었습니다.');
+}
+
+function changeDefectStatus(id, status) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const d = defects.find(x => x.id === id);
+      if (d) { d.status = status; saveStorage('defects', defects); renderQuality(); }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const d = defects.find(x => x.id === id);
+  if (d) { d.status = status; saveStorage('defects', defects); renderQuality(); }
+}
+
+/* 품질기록 - 고객 클레임 등록 / 수정 */
+function openClaimAdd() {
+  if (!checkAdminAction()) return;
+  editClaimId = null;
+  inp('cl-add-ttl').innerHTML = '<i class="ti ti-plus"></i>신규 고객 클레임 접수';
+  inp('cl-save-btn').innerHTML = '<i class="ti ti-check"></i>기록 접수';
+  sv('cl-id', nextCode('CLM', claims));
+  sv('cl-date', today());
+  sv('cl-client', clients[0]?.id || '');
+  fillProductSelect('cl-product', clients[0]?.id || '');
+  sv('cl-content', '');
+  sv('cl-status', '접수');
+  sv('cl-response', '');
+  togglePanel('claim-add-panel');
+}
+
+function openClaimEdit(id) {
+  if (!checkAdminAction()) return;
+  const c = claims.find(x => x.id === id); if (!c) return;
+  editClaimId = id;
+  inp('cl-add-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>수주 사후 품질 불만(클레임) 내역 수정 (${c.id})`;
+  inp('cl-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
+  sv('cl-id', c.id);
+  sv('cl-date', c.date);
+  sv('cl-client', c.clientId);
+  fillProductSelect('cl-product', c.clientId, c.productId);
+  sv('cl-content', c.content);
+  sv('cl-status', c.status);
+  sv('cl-response', c.response || '');
+  
+  const panel = inp('claim-add-panel');
+  panel?.classList.add('open');
+  panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function addClaim() {
+  if (!checkAdminAction()) return;
+  const content = v('cl-content').trim();
+  if (!content) { showToast('접수 불만 내용을 구체적으로 기록해야 합니다.', 'error'); return; }
+  
+  if (editClaimId) {
+    const c = claims.find(x => x.id === editClaimId); if (!c) return;
+    c.date = v('cl-date');
+    c.clientId = v('cl-client');
+    c.productId = v('cl-product');
+    c.content = content;
+    c.status = v('cl-status');
+    c.response = v('cl-response');
+  } else {
+    claims.unshift({
+      id: nextCode('CLM', claims),
+      date: v('cl-date'),
+      clientId: v('cl-client'),
+      productId: v('cl-product'),
+      content,
+      status: v('cl-status'),
+      response: v('cl-response')
+    });
+  }
+  saveStorage('claims', claims);
+  editClaimId = null;
+  closePanel('claim-add-panel');
+  renderQuality();
+  showToast('고객 클레임 조치 리포트가 최종 저장되었습니다.');
+}
+
+function changeClaimStatus(id, status) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const c = claims.find(x => x.id === id);
+      if (c) { c.status = status; saveStorage('claims', claims); renderQuality(); }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const c = claims.find(x => x.id === id);
+  if (c) { c.status = status; saveStorage('claims', claims); renderQuality(); }
+}
+
+/* 품질기록 - 최종 출하 검증 체크리스트 추가 / 수정 */
+function openCheckAdd() {
+  if (!checkAdminAction()) return;
+  editCheckId = null;
+  inp('ck-add-ttl').innerHTML = '<i class="ti ti-clipboard-check"></i>납품 검사 성적 기록';
+  inp('ck-save-btn').innerHTML = '<i class="ti ti-check"></i>저장 완료';
+  sv('ck-id', nextCode('CHK', checkRecords));
+  sv('ck-date', today());
+  sv('ck-client', clients[0]?.id || '');
+  fillProductSelect('ck-product', clients[0]?.id || '');
+  sv('ck-inspector', '');
+  sv('ck-visual', '합격');
+  sv('ck-dim', '합격');
+  sv('ck-func', '합격');
+  sv('ck-result', '합격');
+  sv('ck-note', '');
+  togglePanel('check-add-panel');
+}
+
+function openCheckEdit(id) {
+  if (!checkAdminAction()) return;
+  const r = checkRecords.find(x => x.id === id); if (!r) return;
+  editCheckId = id;
+  inp('ck-add-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>출하 품질 성적 검사서 수정 (${r.id})`;
+  inp('ck-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
+  sv('ck-id', r.id);
+  sv('ck-date', r.date);
+  sv('ck-client', r.clientId);
+  fillProductSelect('ck-product', r.clientId, r.productId);
+  sv('ck-inspector', r.inspector || '');
+  sv('ck-visual', r.visual);
+  sv('ck-dim', r.dim);
+  sv('ck-func', r.func);
+  sv('ck-result', r.result);
+  sv('ck-note', r.note || '');
+  
+  const panel = inp('check-add-panel');
+  panel?.classList.add('open');
+  panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function addCheckRecord() {
+  if (!checkAdminAction()) return;
+  const inspector = v('ck-inspector').trim();
+  if (!inspector) { showToast('검사 실무자의 성함(사인)이 필요합니다.', 'error'); return; }
+  
+  if (editCheckId) {
+    const r = checkRecords.find(x => x.id === editCheckId); if (!r) return;
+    r.date = v('ck-date');
+    r.clientId = v('ck-client');
+    r.productId = v('ck-product');
+    r.inspector = inspector;
+    r.visual = v('ck-visual');
+    r.dim = v('ck-dim');
+    r.func = v('ck-func');
+    r.result = v('ck-result');
+    r.note = v('ck-note');
+  } else {
+    checkRecords.unshift({
+      id: nextCode('CHK', checkRecords),
+      date: v('ck-date'),
+      clientId: v('ck-client'),
+      productId: v('ck-product'),
+      inspector,
+      visual: v('ck-visual'),
+      dim: v('ck-dim'),
+      func: v('ck-func'),
+      result: v('ck-result'),
+      note: v('ck-note')
+    });
+  }
+  saveStorage('checkRecords', checkRecords);
+  editCheckId = null;
+  closePanel('check-add-panel');
+  renderQuality();
+  showToast('최종 완제품 품질검사 합격성적 대장이 반영되었습니다.');
+}
+
+function deleteDefect(id) {
+  if (!checkAdminAction()) return;
+  confirm_('불량 레포트 기록 삭제', '해당 품질 부적합 분석 파일을 데이터베이스에서 폐기하시겠습니까?', () => {
+    const d = defects.find(x => x.id === id);
+    if (d) {
+      pushToTrash('defect', `${d.type} (불량기록)`, id, d);
+      defects = defects.filter(x => x.id !== id);
+      saveStorage('defects', defects);
+      renderQuality();
+      showToast('불량 분석 기록이 휴지통으로 이동했습니다.', 'info');
+    }
+  });
+}
+function deleteClaim(id) {
+  if (!checkAdminAction()) return;
+  confirm_('고객 클레임 소멸 확인', '해당 고객사의 소송/조치 클레임 파일을 완전히 파기하시겠습니까?', () => {
+    const c = claims.find(x => x.id === id);
+    if (c) {
+      pushToTrash('claim', `${c.content} (고객클레임)`, id, c);
+      claims = claims.filter(x => x.id !== id);
+      saveStorage('claims', claims);
+      renderQuality();
+      showToast('클레임 기록이 휴지통으로 이동했습니다.', 'info');
+    }
+  });
+}
+function deleteCheck(id) {
+  if (!checkAdminAction()) return;
+  confirm_('검사 성적 삭제 확인', '완제품 출하 품질 성적 체크 대장에서 지우시겠습니까?', () => {
+    const r = checkRecords.find(x => x.id === id);
+    if (r) {
+      pushToTrash('check', `${getProductName(r.productId)} - ${r.inspector} (검사기록)`, id, r);
+      checkRecords = checkRecords.filter(x => x.id !== id);
+      saveStorage('checkRecords', checkRecords);
+      renderQuality();
+      showToast('검사 성적 대장이 휴지통으로 이동했습니다.', 'info');
+    }
+  });
+}
+
+function exportDefectsCSV() {
+  const h = ['코드','발생일자','완제품모델','공정단계','하자유형','수량','원인파악','조치사항','상태','비고'];
+  const rows = defects.map(d => [
+    d.id, d.date, getProductName(d.productId), d.stage, d.type, d.qty, d.cause || '', d.action || '', d.status, d.note || ''
+  ]);
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_공정불량기록_${today()}.csv`;
+  a.click();
+  showToast('공정 내 불량 리포트 로그가 엑셀로 출력되었습니다.');
+}
+
+function exportClaimsCSV() {
+  const h = ['클레임코드','접수일자','의뢰고객사','완제품모델','불만및피드백사항','조치방안','처리상태'];
+  const rows = claims.map(c => [
+    c.id, c.date, getClientName(c.clientId), getProductName(c.productId), c.content, c.response || '', c.status
+  ]);
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_고객클레임기록_${today()}.csv`;
+  a.click();
+  showToast('고객사 품질 제기 클레임 내역서가 엑셀로 출력되었습니다.');
+}
+
+function exportChecksCSV() {
+  const h = ['검사코드','출하검사일','고객사명','완성품명','인스펙터','외관테스트','치수계측','기능검사','종합판정','비고'];
+  const rows = checkRecords.map(r => [
+    r.id, r.date, getClientName(r.clientId), getProductName(r.productId), r.inspector, r.visual, r.dim, r.func, r.result, r.note || ''
+  ]);
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_출하검사성적표_${today()}.csv`;
+  a.click();
+  showToast('완제품 출하 검사 체크리스트 전체 데이터 성적표가 엑셀로 출력되었습니다.');
+}
+
+/* ════════ 7. 작업 인력 및 출석 관리 ════════ */
+function renderWorkers() {
+  const att = workers.filter(w => w.status !== '결근' && w.status !== '휴가').length;
+  inp('w-total').textContent = workers.length + '명';
+  inp('w-att').textContent = att + '명';
+  const absEl = inp('w-abs');
+  if (absEl) absEl.textContent = `휴직/오프: ${workers.length - att}명 (휴가 포함)`;
+
+  const el = inp('workers-table'); if (!el) return;
+  if (!workers.length) { el.innerHTML = empty('공장 소속 작업원이 아직 등록되지 않았습니다.'); return; }
+
+  el.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>사번번호</th><th>이름</th><th>배정라인</th><th>지정업무</th><th>출근기록</th><th>누적특근</th><th>출결 상황</th><th>삭제조치</th></tr>
+      </thead>
+      <tbody>
+        ${workers.map(w => `
+          <tr>
+            <td style="font-weight:700;">${w.id}</td>
+            <td style="font-weight:700;">${w.name}</td>
+            <td>라인 ${w.line}</td>
+            <td><span class="bd bd-neu">${w.role}</span></td>
+            <td>${w.tin || '—'}</td>
+            <td>${w.ot || '0h'}</td>
+            <td>
+              <select class="stat-sel" onchange="changeWorkerStatus('${w.id}', this.value)">
+                <option${w.status==='근무중'?' selected':''}>근무중</option>
+                <option${w.status==='정비지원'?' selected':''}>정비지원</option>
+                <option${w.status==='결근'?' selected':''}>결근</option>
+                <option${w.status==='휴가'?' selected':''}>휴가</option>
+              </select>
+            </td>
+            <td><button class="del-btn" onclick="deleteWorker('${w.id}')"><i class="ti ti-trash"></i></button></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function changeWorkerStatus(id, val) {
+  if (!isAdmin) {
+    promptAdmin(() => {
+      const w = workers.find(x => x.id === id);
+      if (w) {
+        w.status = val;
+        saveStorage('workers', workers);
+        renderWorkers();
+      }
+    });
+    refreshPage(currentPage);
+    return;
+  }
+  const w = workers.find(x => x.id === id);
+  if (w) {
+    w.status = val;
+    saveStorage('workers', workers);
+    renderWorkers();
+  }
+}
+
+function openWorkerAdd() {
+  if (!checkAdminAction()) return;
+  sv('wa-id', nextCode('E', workers));
+  ['wa-name', 'wa-role', 'wa-in', 'wa-ot'].forEach(id => sv(id, ''));
+  sv('wa-status', '근무중');
+  togglePanel('w-add-panel');
+}
+
+function addWorker() {
+  if (!checkAdminAction()) return;
+  const name = v('wa-name').trim();
+  if (!name) { showToast('작업 인원의 실명은 필수 기입입니다.', 'error'); return; }
+  const id = nextCode('E', workers);
+  workers.push({
+    id, name,
+    line: v('wa-line'),
+    role: v('wa-role') || '조립',
+    tin: v('wa-in') || '08:00',
+    ot: v('wa-ot') || '0h',
+    status: v('wa-status')
+  });
+  saveStorage('workers', workers);
+  closePanel('w-add-panel');
+  renderWorkers();
+  showToast('신규 현장 기술자 정보가 등록되었습니다.');
+}
+
+function deleteWorker(id) {
+  if (!checkAdminAction()) return;
+  const w = workers.find(x => x.id === id);
+  if (!w) return;
+  confirm_('현장 임직원 퇴사/방출', `현장 소속 <strong>[${w.name}]</strong> 사원의 인사정보 프로필을 시스템에서 파기하시겠습니까?`, () => {
+    pushToTrash('worker', `${w.name} (작업원)`, id, w);
+
+    workers = workers.filter(x => x.id !== id);
+    saveStorage('workers', workers);
+    renderWorkers();
+    showToast('사원 정보가 휴지통으로 이동했습니다.', 'info');
+  });
+}
+
+function exportWorkersCSV() {
+  const h = ['작업원사번','작업원명','배정설비라인','소속파트','출근기록시간','연장특근조업','현재출결상황'];
+  const rows = workers.map(w => [
+    w.id, w.name, `라인 ${w.line}`, w.role, w.tin || '—', w.ot || '0h', w.status
+  ]);
+  const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `MESPro_인원조업현황_${today()}.csv`;
+  a.click();
+  showToast('공장 조업 인원 근무 편제 및 근태 현황이 엑셀로 출력되었습니다.');
+}
+
+/* ════════ 8. 알림 로그 조회 ════════ */
+function renderAlerts() {
+  const im = { err: 'ti-alert-circle', warn: 'ti-alert-triangle', info: 'ti-info-circle' };
+  const fil = alertsList.filter(a => {
+    if (currentAlertFilter === 'all') return true;
+    return a.type === currentAlertFilter;
+  });
+
+  inp('alerts-list').innerHTML = fil.length ? fil.map((a, i) => `
+    <div class="al al-${a.type}">
+      <i class="ti ${im[a.type]}"></i>
+      <div style="flex:1;">
+        <div class="al-t">${a.title}</div>
+        <div class="al-s">${a.sub}</div>
+      </div>
+      <button class="del-btn" onclick="delAlert(${i})"><i class="ti ti-x" style="font-size:12px;"></i>기록 확인</button>
+    </div>`).join('') : empty('수신 및 보존된 알림 내역이 비어있습니다.');
+
+  inp('alertBadge').textContent = alertsList.filter(a => a.type === 'err').length;
+}
+
+function filterAlerts(type) {
+  currentAlertFilter = type;
+  const tButtons = document.querySelectorAll('#alerts-toolbar .btn');
+  tButtons.forEach(btn => btn.classList.remove('btn-primary'));
+  
+  if (type === 'all') tButtons[0].classList.add('btn-primary');
+  else if (type === 'err') tButtons[1].classList.add('btn-primary');
+  else if (type === 'warn') tButtons[2].classList.add('btn-primary');
+  
+  renderAlerts();
+}
+
+function delAlert(i) {
+  alertsList.splice(i, 1);
+  saveStorage('alerts', alertsList);
+  renderAlerts();
+}
+
+/* ════════ 9. 휴지통 백업 및 복구 로직 ════════ */
+function pushToTrash(type, name, originalId, data, cascadeData = null) {
+  const newItem = {
+    id: nextCode('TRSH', trash, 'id'),
+    type,
+    name,
+    originalId,
+    deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    data,
+    cascadeData
+  };
+  trash.unshift(newItem);
+  saveStorage('trash', trash);
+  updateTrashBadge();
+}
+
+function updateTrashBadge() {
+  const el = inp('trashBadge');
+  if (el) el.textContent = trash.length;
+}
+
+function restoreTrash(id) {
+  const item = trash.find(x => x.id === id);
+  if (!item) return;
+
+  if (item.type === 'client') {
+    if (!clients.some(c => c.id === item.originalId)) {
+      clients.push(item.data);
+      saveStorage('clients', clients);
+    }
+    if (item.cascadeData) {
+      if (item.cascadeData.products) {
+        item.cascadeData.products.forEach(p => {
+          if (!products.some(x => x.id === p.id)) products.push(p);
+        });
+        saveStorage('products', products);
+      }
+      if (item.cascadeData.materials) {
+        item.cascadeData.materials.forEach(m => {
+          if (!materials.some(x => x.id === m.id)) materials.push(m);
+        });
+        saveStorage('materials', materials);
+      }
+      if (item.cascadeData.workOrders) {
+        item.cascadeData.workOrders.forEach(w => {
+          if (!workOrders.some(x => x.id === w.id)) workOrders.push(w);
+        });
+        saveStorage('workOrders', workOrders);
+      }
+    }
+    showToast(`고객사 [${item.data.name}] 및 연동 하위 완제품/자재가 완벽히 역복구되었습니다.`);
+  } 
+  else if (item.type === 'product') {
+    if (!products.some(p => p.id === item.originalId)) {
+      products.push(item.data);
+      saveStorage('products', products);
+    }
+    if (item.cascadeData) {
+      if (item.cascadeData.materials) {
+        item.cascadeData.materials.forEach(m => {
+          if (!materials.some(x => x.id === m.id)) materials.push(m);
+        });
+        saveStorage('materials', materials);
+      }
+      if (item.cascadeData.workOrders) {
+        item.cascadeData.workOrders.forEach(w => {
+          if (!workOrders.some(x => x.id === w.id)) workOrders.push(w);
+        });
+        saveStorage('workOrders', workOrders);
+      }
+    }
+    showToast(`완제품 [${item.data.name}] 및 종속 작업지시가 복원되었습니다.`);
+  } 
+  else if (item.type === 'material') {
+    if (!materials.some(m => m.id === item.originalId)) {
+      materials.push(item.data);
+      saveStorage('materials', materials);
+    }
+    showToast(`자재 가공 발주건 [${item.data.name}]이 복구되었습니다.`);
+  } 
+  else if (item.type === 'inventory') {
+    if (!inventory.some(i => i.id === item.originalId)) {
+      inventory.push(item.data);
+      saveStorage('inventory', inventory);
+    }
+    showToast(`창고 재고 보관 품목 [${item.data.name}]이 복원되었습니다.`);
+  } 
+  else if (item.type === 'order') {
+    if (!workOrders.some(o => o.id === item.originalId)) {
+      workOrders.push(item.data);
+      saveStorage('workOrders', workOrders);
+    }
+    showToast(`현장 생산지시 [${item.data.id}] 지시서가 복구되었습니다.`);
+  } 
+  else if (item.type === 'defect') {
+    if (!defects.some(d => d.id === item.originalId)) {
+      defects.push(item.data);
+      saveStorage('defects', defects);
+    }
+    showToast(`품질 부적합 분석 리포트가 성공적으로 복구되었습니다.`);
+  } 
+  else if (item.type === 'claim') {
+    if (!claims.some(c => c.id === item.originalId)) {
+      claims.push(item.data);
+      saveStorage('claims', claims);
+    }
+    showToast(`고객 클레임 상세 내역이 복구되었습니다.`);
+  } 
+  else if (item.type === 'check') {
+    if (!checkRecords.some(r => r.id === item.originalId)) {
+      checkRecords.push(item.data);
+      saveStorage('checkRecords', checkRecords);
+    }
+    showToast(`최종 승인 출하 성적 대장이 복원되었습니다.`);
+  } 
+  else if (item.type === 'worker') {
+    if (!workers.some(w => w.id === item.originalId)) {
+      workers.push(item.data);
+      saveStorage('workers', workers);
+    }
+    showToast(`[${item.data.name}] 사원의 조업 임직원 프로필이 복구되었습니다.`);
+  }
+
+  trash = trash.filter(x => x.id !== id);
+  saveStorage('trash', trash);
+  
+  syncFilterDropdowns();
+  updateTrashBadge();
+  renderTrash();
+}
+
+function deleteTrashPermanently(id) {
+  const item = trash.find(x => x.id === id);
+  if (!item) return;
+
+  confirm_('데이터 영구 삭제 경고', `<strong>[${item.name}]</strong> 데이터를 휴지통에서 완전히 삭제하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">이 작업은 복구가 절대 불가능하며 데이터가 완전히 유실됩니다.</span>`, () => {
+    trash = trash.filter(x => x.id !== id);
+    saveStorage('trash', trash);
+    updateTrashBadge();
+    renderTrash();
+    showToast('데이터가 시스템에서 영구 파기되었습니다.', 'info');
+  });
+}
+
+function emptyTrash() {
+  if (trash.length === 0) {
+    showToast('비워둘 수 있는 휴지통 항목이 없습니다.', 'info');
+    return;
+  }
+  confirm_('휴지통 전체 비우기', `휴지통 내부 <strong>총 ${trash.length}건</strong>의 모든 백업 데이터를 영구 파기하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">비워진 메모리 데이터는 복구 조작을 진행할 수 없습니다.</span>`, () => {
+    trash = [];
+    saveStorage('trash', trash);
+    updateTrashBadge();
+    renderTrash();
+    showToast('휴지통을 깨끗하게 비웠습니다.', 'info');
+  });
+}
+
+function renderTrash() {
+  const filterType = v('trash-filter-type');
+  const searchQ = v('trash-q').toLowerCase();
+
+  const filtered = trash.filter(i => {
+    if (filterType && i.type !== filterType) return false;
+    if (searchQ && ![i.name, i.originalId, i.id].join(' ').toLowerCase().includes(searchQ)) return false;
+    return true;
+  });
+
+  inp('trash-total').textContent = trash.length + '건';
+
+  const tableContainer = inp('trash-table');
+  if (!tableContainer) return;
+  if (!filtered.length) { tableContainer.innerHTML = empty('휴지통에 삭제 및 대기 상태인 데이터가 존재하지 않습니다.'); return; }
+
+  const typeLabels = {
+    client: '고객사',
+    product: '완제품',
+    material: '발주자재',
+    inventory: '재고품목',
+    order: '생산지시',
+    defect: '불량기록',
+    claim: '고객클레임',
+    check: '검사기록',
+    worker: '작업원'
+  };
+
+  tableContainer.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>휴지통 코드</th>
+          <th>원래 데이터 분류</th>
+          <th>원래 고유 코드</th>
+          <th>기존 데이터 개요</th>
+          <th>삭제 일시</th>
+          <th>연쇄 복구 유무</th>
+          <th>동작</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtered.map(i => {
+          let sizeLabel = '단일 항목';
+          if (i.cascadeData) {
+            let parts = [];
+            if (i.cascadeData.products && i.cascadeData.products.length) parts.push(`제품 ${i.cascadeData.products.length}종`);
+            if (i.cascadeData.materials && i.cascadeData.materials.length) parts.push(`자재 ${i.cascadeData.materials.length}종`);
+            if (i.cascadeData.workOrders && i.cascadeData.workOrders.length) parts.push(`생산지시 ${i.cascadeData.workOrders.length}건`);
+            sizeLabel = parts.length > 0 ? `하위 데이터 동시복구 (${parts.join(', ')})` : '단일 항목';
+          }
+          return `
+            <tr>
+              <td>${i.id}</td>
+              <td><span class="bd bd-neu">${typeLabels[i.type] || i.type}</span></td>
+              <td style="font-family: monospace; font-weight:700;">${i.originalId}</td>
+              <td style="font-weight:700; color:var(--tx-s);">${i.name}</td>
+              <td>${i.deletedAt}</td>
+              <td><span style="font-size:11px; font-weight:600; color:var(--tx-i);">${sizeLabel}</span></td>
+              <td>
+                <button class="restore-btn" onclick="restoreTrash('${i.id}')"><i class="ti ti-rotate-clockwise"></i>복구</button>
+                <button class="del-btn" onclick="deleteTrashPermanently('${i.id}')" style="margin-left:4px;"><i class="ti ti-trash"></i>영구 삭제</button>
+              </td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* ════════ 키보드 ESC 종료 및 엔터 승인 단축기 ════════ */
+document.addEventListener('keydown', e => {
+  const confirmDlg = inp('confirmDlg');
+  const kanbanModal = inp('kanbanEditModal');
+  const adminModal = inp('adminAuthModal');
+  const passwordChangeModal = inp('adminPasswordChangeModal');
+  
+  if (confirmDlg && confirmDlg.classList.contains('open')) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      inp('dlgOkBtn')?.click();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeDlg();
+    }
+    return;
+  }
+  
+  if (kanbanModal && kanbanModal.classList.contains('open')) {
+    if (e.key === 'Enter') {
+      if (document.activeElement?.id !== 'km-memo') {
+        e.preventDefault();
+        inp('kmSaveBtn')?.click();
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeKanbanModal();
+    }
+    return;
+  }
+
+  if (adminModal && adminModal.classList.contains('open')) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      verifyAdminPassword();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeAdminAuth();
+    }
+    return;
+  }
+
+  if (passwordChangeModal && passwordChangeModal.classList.contains('open')) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitAdminPasswordChange();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeAdminPasswordChange();
+    }
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.add-panel.open').forEach(p => p.classList.remove('open'));
+  }
+});
+
+/* ════════ 실시간 다크 모드 수동전환 ════════ */
+function initTheme() {
+  const t = localStorage.getItem('mes_theme');
+  if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+    inp('themeIcon').className = 'ti ti-sun';
+  } else {
+    document.documentElement.classList.remove('dark');
+    inp('themeIcon').className = 'ti ti-moon';
+  }
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  if (root.classList.contains('dark')) {
+    root.classList.remove('dark');
+    localStorage.setItem('mes_theme', 'light');
+    inp('themeIcon').className = 'ti ti-moon';
+  } else {
+    root.classList.add('dark');
+    localStorage.setItem('mes_theme', 'dark');
+    inp('themeIcon').className = 'ti ti-sun';
+  }
+  if (currentPage === 'dashboard') {
+    renderDashboard();
+  }
+}
+
+/* ════════ 프로그램 기동 초기화 ════════ */
+syncFilterDropdowns();
+initTheme();
+renderDashboard();
+renderAlerts();
+updateTrashBadge();
+updateAdminUI();
+
+function tick() {
+  const n = new Date();
+  const yr = n.getFullYear();
+  const mo = String(n.getMonth() + 1).padStart(2, '0');
+  const dy = String(n.getDate()).padStart(2, '0');
+  const hh = String(n.getHours()).padStart(2, '0');
+  const mm = String(n.getMinutes()).padStart(2, '0');
+  const ss = String(n.getSeconds()).padStart(2, '0');
+  const clock = inp('clock');
+  if (clock) clock.textContent = `${yr}-${mo}-${dy} ${hh}:${mm}:${ss}`;
+}
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
